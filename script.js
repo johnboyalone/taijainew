@@ -18,7 +18,7 @@ let isChatOpen = false;
 let hasInteracted = false;
 let isBgmEnabled = true;
 let isSfxEnabled = true;
-let recentGuesses = []; // สำหรับเก็บ 3 การทายล่าสุด
+let recentGuesses = [];
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     stats: { guesses: 0, correctGuesses: 0, assassinateSuccess: 0, assassinateFails: 0, timeOuts: 0, damageTaken: 0, firstBlood: false }
                 });
                 playerRef.onDisconnect().remove();
-                recentGuesses = []; // ล้างประวัติการทายเมื่อเข้าห้องใหม่
+                recentGuesses = [];
                 listenToRoomUpdates();
                 navigateTo('game');
             });
@@ -241,18 +241,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             const roomData = snapshot.val();
-            updatePlayerList(roomData);
+            updatePlayerList(roomData); // อัปเดตรายชื่อผู้เล่นเสมอ
             updateChat(roomData.chat);
 
             const myPlayer = roomData.players ? roomData.players[currentPlayerId] : null;
 
-            if (!myPlayer) return; // ถ้าเราไม่มีข้อมูลในห้องแล้ว ให้ออก
+            if (!myPlayer) return;
 
-            if (roomData.status === 'finished') {
-                defeatedOverlay.style.display = 'none';
-            } else {
-                defeatedOverlay.style.display = myPlayer.status === 'defeated' ? 'flex' : 'none';
-            }
+            defeatedOverlay.style.display = myPlayer.status === 'defeated' ? 'flex' : 'none';
 
             if (roomData.status === 'waiting') {
                 gameElements.setupSection.style.display = 'block';
@@ -317,42 +313,53 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
         const targetPlayerId = activePlayers[currentTargetIndexInActive];
         const targetPlayerName = players[targetPlayerId].name;
+        gameElements.targetIndicator.textContent = `เป้าหมาย: ${targetPlayerName}`;
 
         const attackers = activePlayers.filter(id => id !== targetPlayerId);
-        if (attackers.length === 0) { return; }
+        if (attackers.length === 0) {
+             // กรณีเหลือ 2 คน คนที่เป็นเป้าหมายจะไม่มีคนทาย
+            gameElements.turnIndicator.textContent = "รอตาถัดไป...";
+            return;
+        }
 
         const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
         const attackerPlayerId = attackers[currentAttackerIndexInAttackers];
         const attackerPlayerName = players[attackerPlayerId].name;
 
         const isMyTurn = attackerPlayerId === currentPlayerId;
-        const amITarget = targetPlayerId === currentPlayerId;
         const amIDefeated = players[currentPlayerId]?.status === 'defeated';
+        const amITarget = targetPlayerId === currentPlayerId;
 
-        gameElements.turnIndicator.textContent = `${attackerPlayerName} กำลังทาย`;
-        gameElements.targetIndicator.textContent = `เป้าหมาย: ${targetPlayerName}`;
-
-        if (isMyTurn) {
-            gameElements.turnIndicator.textContent = "ถึงตาคุณแล้ว!";
-            playSound(sounds.yourTurn);
-        }
         if (amITarget) {
-            gameElements.targetIndicator.textContent = "คุณคือเป้าหมาย!";
+            gameElements.turnIndicator.textContent = "คุณคือเป้าหมาย!";
+        } else {
+            gameElements.turnIndicator.textContent = `${attackerPlayerName} กำลังทาย`;
         }
 
         gameElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
         buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
 
-        showAttackAnimation(attackerPlayerId, targetPlayerId);
+        // Highlight attacker and target
+        document.querySelectorAll('.player-item').forEach(el => {
+            el.classList.remove('attacker', 'target');
+            if (el.dataset.playerId === attackerPlayerId) el.classList.add('attacker');
+            if (el.dataset.playerId === targetPlayerId) el.classList.add('target');
+        });
 
-        const serverTimeOffset = (firebase.database().getServerTime() || Date.now()) - Date.now();
+        if (isMyTurn && !amIDefeated) {
+            playSound(sounds.yourTurn);
+            showAttackAnimation(attackerPlayerId, targetPlayerId);
+        }
+
+        const serverTimeOffset = (roomData.serverTime || Date.now()) - Date.now();
         turnTimer = setInterval(() => {
-            const serverNow = Date.now() + serverTimeOffset;
-            const elapsed = (serverNow - turnStartTime) / 1000;
-            const remainingRatio = Math.max(0, 1 - (elapsed / config.turnTime));
-            gameElements.timerBar.style.width = `${remainingRatio * 100}%`;
+            const now = Date.now() + serverTimeOffset;
+            const elapsed = (now - turnStartTime) / 1000;
+            const remaining = Math.max(0, config.turnTime - elapsed);
+            const remainingPercent = (remaining / config.turnTime) * 100;
+            gameElements.timerBar.style.width = `${remainingPercent}%`;
 
-            if (remainingRatio <= 0) {
+            if (remaining <= 0) {
                 clearInterval(turnTimer);
                 if (isMyTurn) handleTimeOut(attackerPlayerId);
             }
@@ -378,15 +385,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const isCorrect = bulls === config.digitCount;
 
             let updates = {};
-            const myStats = players[currentPlayerId].stats;
-            updates[`/players/${currentPlayerId}/stats/guesses`] = (myStats.guesses || 0) + 1;
-            updates[`/guessHistory/${database.ref().push().key}`] = { attackerId: currentPlayerId, targetId: targetPlayerId, guess: currentInput, bulls, cows, isAssassination, timestamp: firebase.database.ServerValue.TIMESTAMP };
+            const newGuessKey = database.ref().push().key;
+            updates[`/guessHistory/${newGuessKey}`] = { attackerId: currentPlayerId, targetId: targetPlayerId, guess: currentInput, bulls, cows, isAssassination, timestamp: firebase.database.ServerValue.TIMESTAMP };
+            updates[`/players/${currentPlayerId}/stats/guesses`] = (players[currentPlayerId].stats.guesses || 0) + 1;
+
+            if (isCorrect) {
+                updates[`/players/${currentPlayerId}/stats/correctGuesses`] = (players[currentPlayerId].stats.correctGuesses || 0) + 1;
+            }
 
             if (isAssassination) {
                 if (isCorrect) {
                     updates[`/players/${targetPlayerId}/status`] = 'defeated';
                     updates[`/players/${targetPlayerId}/hp`] = 0;
-                    updates[`/players/${currentPlayerId}/stats/assassinateSuccess`] = (myStats.assassinateSuccess || 0) + 1;
+                    updates[`/players/${currentPlayerId}/stats/assassinateSuccess`] = (players[currentPlayerId].stats.assassinateSuccess || 0) + 1;
+                    updates[`/players/${targetPlayerId}/stats/damageTaken`] = (players[targetPlayerId].stats.damageTaken || 0) + 3; // โดนตุย = 3 damage
                     
                     const isFirstKill = !Object.values(players).some(p => p.stats.firstBlood);
                     if (isFirstKill) {
@@ -396,13 +408,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     playSound(sounds.wrong);
                     const myHp = players[currentPlayerId].hp - 1;
                     updates[`/players/${currentPlayerId}/hp`] = myHp;
-                    updates[`/players/${currentPlayerId}/stats/assassinateFails`] = (myStats.assassinateFails || 0) + 1;
-                    updates[`/players/${currentPlayerId}/stats/damageTaken`] = (myStats.damageTaken || 0) + 1;
+                    updates[`/players/${currentPlayerId}/stats/assassinateFails`] = (players[currentPlayerId].stats.assassinateFails || 0) + 1;
+                    updates[`/players/${currentPlayerId}/stats/damageTaken`] = (players[currentPlayerId].stats.damageTaken || 0) + 1;
                     if (myHp <= 0) updates[`/players/${currentPlayerId}/status`] = 'defeated';
                 }
             } else {
                 if (isCorrect) {
-                    updates[`/players/${currentPlayerId}/stats/correctGuesses`] = (myStats.correctGuesses || 0) + 1;
+                    const targetHp = players[targetPlayerId].hp - 1;
+                    updates[`/players/${targetPlayerId}/hp`] = targetHp;
+                    updates[`/players/${targetPlayerId}/stats/damageTaken`] = (players[targetPlayerId].stats.damageTaken || 0) + 1;
+                    if (targetHp <= 0) {
+                        updates[`/players/${targetPlayerId}/status`] = 'defeated';
+                        const isFirstKill = !Object.values(players).some(p => p.stats.firstBlood);
+                        if (isFirstKill) {
+                            updates[`/players/${currentPlayerId}/stats/firstBlood`] = true;
+                        }
+                    }
                 }
             }
 
@@ -434,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
             const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
             if (activePlayers.length <= 1) {
-                roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+                roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP, serverTime: firebase.database.ServerValue.TIMESTAMP });
                 return;
             }
 
@@ -443,9 +464,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const nextAttackerIndex = (attackerTurnIndex + 1);
             if (nextAttackerIndex >= attackers.length) {
-                roomRef.update({ targetPlayerIndex: (targetPlayerIndex + 1), attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+                roomRef.update({ targetPlayerIndex: (targetPlayerIndex + 1) % activePlayers.length, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP, serverTime: firebase.database.ServerValue.TIMESTAMP });
             } else {
-                roomRef.update({ attackerTurnIndex: nextAttackerIndex, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+                roomRef.update({ attackerTurnIndex: nextAttackerIndex, turnStartTime: firebase.database.ServerValue.TIMESTAMP, serverTime: firebase.database.ServerValue.TIMESTAMP });
             }
         });
     }
@@ -454,95 +475,50 @@ document.addEventListener('DOMContentLoaded', () => {
         let bulls = 0, cows = 0;
         const secretChars = secret.split('');
         const guessChars = guess.split('');
-        const secretCounts = {};
-        const guessCounts = {};
+        const usedSecretIndexes = new Array(secret.length).fill(false);
+        const usedGuessIndexes = new Array(guess.length).fill(false);
 
-        for (let i = 0; i < secret.length; i++) {
-            if (secretChars[i] === guessChars[i]) {
+        for (let i = 0; i < guessChars.length; i++) {
+            if (guessChars[i] === secretChars[i]) {
                 bulls++;
-            } else {
-                secretCounts[secretChars[i]] = (secretCounts[secretChars[i]] || 0) + 1;
-                guessCounts[guessChars[i]] = (guessCounts[guessChars[i]] || 0) + 1;
+                usedSecretIndexes[i] = true;
+                usedGuessIndexes[i] = true;
             }
         }
 
-        for (const key in guessCounts) {
-            if (secretCounts[key]) {
-                cows += Math.min(guessCounts[key], secretCounts[key]);
+        for (let i = 0; i < guessChars.length; i++) {
+            if (usedGuessIndexes[i]) continue;
+            for (let j = 0; j < secretChars.length; j++) {
+                if (usedSecretIndexes[j]) continue;
+                if (guessChars[i] === secretChars[j]) {
+                    cows++;
+                    usedSecretIndexes[j] = true;
+                    break;
+                }
             }
         }
         return { bulls, cows };
     }
 
-    function showAttackAnimation(attackerId, targetId) {
-        const attackerElem = document.querySelector(`.player-item[data-player-id="${attackerId}"]`);
-        const targetElem = document.querySelector(`.player-item[data-player-id="${targetId}"]`);
-        const container = gameElements.attackAnimationContainer;
-
-        if (attackerElem && targetElem && container) {
-            container.innerHTML = '';
-            const arrow = document.createElement('div');
-            arrow.className = 'attack-arrow';
-            arrow.innerHTML = '➤';
-
-            const startRect = attackerElem.getBoundingClientRect();
-            const endRect = targetElem.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-
-            const startX = startRect.left + startRect.width / 2 - containerRect.left;
-            const startY = startRect.top + startRect.height / 2 - containerRect.top;
-            const endX = endRect.left + endRect.width / 2 - containerRect.left;
-            const endY = endRect.top + endRect.height / 2 - containerRect.top;
-
-            const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
-
-            arrow.style.left = `${startX}px`;
-            arrow.style.top = `${startY}px`;
-            arrow.style.transform = `rotate(${angle}deg)`;
-
-            container.appendChild(arrow);
-
-            requestAnimationFrame(() => {
-                arrow.style.transform = `translate(${endX - startX}px, ${endY - startY}px) rotate(${angle}deg)`;
-            });
-
-            setTimeout(() => arrow.remove(), 1000);
-        }
-    }
-
     // --- UI Updates ---
     function updatePlayerList(roomData) {
-        const { players, status, playerOrder, targetPlayerIndex, attackerTurnIndex } = roomData;
+        const { players } = roomData;
         const listsToUpdate = [gameElements.playerList, gameElements.playerListSetup];
-        listsToUpdate.forEach(list => { if (list) list.innerHTML = ''; });
+        
+        listsToUpdate.forEach(list => {
+            if (list) list.innerHTML = '';
+        });
 
         if (!players) return;
-
-        let targetPlayerId, attackerPlayerId;
-        if (status === 'playing') {
-            const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-            if (activePlayers.length > 0) {
-                const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
-                targetPlayerId = activePlayers[currentTargetIndexInActive];
-                const attackers = activePlayers.filter(id => id !== targetPlayerId);
-                if (attackers.length > 0) {
-                    const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
-                    attackerPlayerId = attackers[currentAttackerIndexInAttackers];
-                }
-            }
-        }
 
         Object.entries(players).forEach(([id, player]) => {
             const item = document.createElement('div');
             item.className = 'player-item';
             item.dataset.playerId = id;
-
             if (player.status === 'defeated') item.classList.add('player-defeated');
-            if (id === targetPlayerId) item.classList.add('target');
-            if (id === attackerPlayerId) item.classList.add('attacker');
 
             const hpBar = `<div class="hp-bar">${[...Array(3)].map((_, i) => `<div class="hp-point ${i < player.hp ? '' : 'lost'}"></div>`).join('')}</div>`;
-            const readyStatus = status === 'waiting' ? (player.isReady ? `<span style="color:var(--text-dark);">พร้อม</span>` : `<span style="opacity:0.7;">รอ...</span>`) : hpBar;
+            const readyStatus = roomData.status === 'waiting' ? (player.isReady ? `<span style="color:var(--text-dark);">พร้อม</span>` : `<span style="opacity:0.7;">รอ...</span>`) : hpBar;
 
             item.innerHTML = `<div class="player-info">${player.name}</div>${readyStatus}`;
             
@@ -556,14 +532,10 @@ document.addEventListener('DOMContentLoaded', () => {
         historyElements.body.innerHTML = '';
         if (!guessHistory || !players) return;
 
-        const myGuesses = Object.values(guessHistory).filter(log => log.attackerId === currentPlayerId);
-        recentGuesses = myGuesses.slice(-3); // อัปเดต 3 การทายล่าสุด
+        const myGuesses = Object.values(guessHistory).filter(log => log.attackerId === currentPlayerId).sort((a, b) => b.timestamp - a.timestamp);
 
-        // อัปเดตการแสดงผลบนปุ่มประวัติ
-        historyElements.recentGuesses.innerHTML = recentGuesses.map(log => {
-            const targetName = players[log.targetId] ? players[log.targetId].name.substring(0, 3) : '???';
-            return `<div>${log.guess} → ${targetName} (${log.bulls}B, ${log.cows}C)</div>`;
-        }).join('');
+        recentGuesses = myGuesses.slice(0, 3).map(log => log.guess);
+        historyElements.recentGuesses.textContent = recentGuesses.length > 0 ? recentGuesses.join(', ') : 'ยังไม่ได้ทาย';
 
         const myGuessesByTarget = myGuesses.reduce((acc, log) => {
             if (!acc[log.targetId]) acc[log.targetId] = [];
@@ -578,11 +550,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const table = document.createElement('table');
             table.className = 'history-table';
-            table.innerHTML = `<thead><tr><th>เลขที่ทาย</th><th>ผล</th></tr></thead>`;
+            table.innerHTML = `<thead><tr><th>เลขที่ทาย</th><th>ผล (B/C)</th></tr></thead>`;
             const tbody = document.createElement('tbody');
-            logs.slice().reverse().forEach(log => {
+            logs.forEach(log => {
                 const row = document.createElement('tr');
-                const hints = `<span class="hint-bull">${log.bulls}</span> <span class="hint-cow">${log.cows}</span>`;
+                const hints = `<span class="hint-bull">${log.bulls}</span> / <span class="hint-cow">${log.cows}</span>`;
                 row.innerHTML = `<td class="history-guess">${log.guess} ${log.isAssassination ? '💀' : ''}</td><td>${hints}</td>`;
                 tbody.appendChild(row);
             });
@@ -591,6 +563,42 @@ document.addEventListener('DOMContentLoaded', () => {
             historyElements.body.appendChild(section);
         });
     }
+
+    function showAttackAnimation(attackerId, targetId) {
+        const attackerEl = document.querySelector(`.player-item[data-player-id="${attackerId}"]`);
+        const targetEl = document.querySelector(`.player-item[data-player-id="${targetId}"]`);
+
+        if (!attackerEl || !targetEl) return;
+
+        const containerRect = gameElements.attackAnimationContainer.getBoundingClientRect();
+        const startRect = attackerEl.getBoundingClientRect();
+        const endRect = targetEl.getBoundingClientRect();
+
+        const startX = startRect.left + startRect.width / 2 - containerRect.left;
+        const startY = startRect.top + startRect.height / 2 - containerRect.top;
+        const endX = endRect.left + endRect.width / 2 - containerRect.left;
+        const endY = endRect.top + endRect.height / 2 - containerRect.top;
+
+        const arrow = document.createElement('div');
+        arrow.className = 'attack-arrow';
+        arrow.textContent = '>';
+        arrow.style.left = `${startX}px`;
+        arrow.style.top = `${startY}px`;
+
+        const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
+        arrow.style.transform = `rotate(${angle}deg) scale(0.5)`;
+
+        gameElements.attackAnimationContainer.appendChild(arrow);
+
+        requestAnimationFrame(() => {
+            arrow.style.transform = `translate(${endX - startX}px, ${endY - startY}px) rotate(${angle}deg) scale(1)`;
+        });
+
+        setTimeout(() => {
+            arrow.remove();
+        }, 500);
+    }
+
 
     // --- Chat Logic ---
     function handleSendChat() {
@@ -638,15 +646,19 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.className = 'chat-marquee-item';
         marquee.textContent = `${msg.senderName}: ${msg.text}`;
         chatElements.marqueeContainer.appendChild(marquee);
-        setTimeout(() => marquee.remove(), 5900);
+        setTimeout(() => marquee.remove(), 5000);
     }
 
     // --- End Game Logic ---
     function endGame(roomData) {
         if (turnTimer) clearInterval(turnTimer);
-        if (roomData.winnerName !== "ไม่มีผู้ชนะ") playSound(sounds.win);
+
+        if (roomData.winnerName !== "ไม่มีผู้ชนะ") {
+            playSound(sounds.win);
+        }
 
         const titles = assignTitles(roomData);
+
         showTitleCards(roomData, titles, () => {
             showSummaryPage(roomData, titles);
         });
@@ -656,47 +668,63 @@ document.addEventListener('DOMContentLoaded', () => {
         const { players, winnerId } = roomData;
         let assignedTitles = {};
 
+        const titleDefinitions = [
+            // Priority 10 (Highest) - Winner Titles
+            { id: 'WINNER_FLAWLESS', emoji: '👑', title: 'ผู้ชนะไร้พ่าย', desc: 'ชนะโดยไม่เสียพลังชีวิตเลยแม้แต่แต้มเดียว!', priority: 10, condition: (p, s) => p.id === winnerId && s.damageTaken === 0 },
+            { id: 'WINNER_CLUTCH', emoji: '❤️‍🔥', title: 'ผู้รอดชีวิตปาฏิหาริย์', desc: 'ชนะทั้งที่เหลือพลังชีวิตแค่ 1 หน่วย!', priority: 10, condition: (p, s) => p.id === winnerId && p.hp === 1 },
+            { id: 'WINNER_DEFAULT', emoji: '🏆', title: 'ผู้รอดชีวิตหนึ่งเดียว', desc: 'ยืนหนึ่งอย่างสมศักดิ์ศรี!', priority: 9, condition: (p, s) => p.id === winnerId },
+
+            // Priority 8 - Special Achievement Titles
+            { id: 'FIRST_BLOOD', emoji: '🩸', title: 'มือสังหารคนแรก', desc: 'ประเดิมชัยชนะแรกของเกมนี้!', priority: 8, condition: (p, s) => s.firstBlood },
+            { id: 'ASSASSIN_MASTER', emoji: '🥷', title: 'นักฆ่าไร้เงา', desc: 'สังหารผู้เล่นอื่นสำเร็จตั้งแต่ 2 ครั้งขึ้นไป', priority: 8, condition: (p, s) => s.assassinateSuccess >= 2 },
+            { id: 'HEADSHOT', emoji: '🎯', title: 'จับตายในนัดเดียว', desc: 'ทายเลขถูกเป๊ะในครั้งแรกที่ทายเป้าหมายนั้น', priority: 8, condition: (p, s, h) => h.some(g => g.attackerId === p.id && h.filter(gh=>gh.targetId === g.targetId && gh.attackerId === p.id).findIndex(fg=>fg.guess===g.guess) === 0 && g.bulls === roomData.config.digitCount) },
+
+            // Priority 7 - "Almost" Titles
+            { id: 'ALMOST_GOD', emoji: '🤏', title: 'เกือบจะเป็นพระเจ้า', desc: 'ทายถูกเกือบหมด แต่พลาดไปนิดเดียวจริงๆ', priority: 7, condition: (p, s) => s.correctGuesses > 0 && p.id !== winnerId },
+            { id: 'FINAL_TWO', emoji: '🥈', title: 'ผู้ท้าชิงคนสุดท้าย', desc: 'ไปได้ไกลถึงรอบ 2 คนสุดท้าย!', priority: 7, condition: (p, s) => p.status === 'defeated' && Object.values(players).filter(pl=>pl.status==='playing').length === 1 },
+
+            // Priority 6 - Negative Achievement Titles (Funny)
+            { id: 'ASSASSIN_FAIL', emoji: '🤡', title: 'มือสังหารจอมพลาดเป้า', desc: 'ตุยเย่... แต่พลาดเป้า!', priority: 6, condition: (p, s) => s.assassinateFails >= 2 },
+            { id: 'TIMEOUT_KING', emoji: '🐌', title: 'นักคิดแห่งยุค', desc: 'คิดนานจนเพื่อนหลับหมดแล้ว', priority: 6, condition: (p, s) => s.timeOuts >= 2 },
+            { id: 'WRONG_NUMBER', emoji: '❓', title: 'สายลับสองหน้า', desc: 'ทายเลขไม่ถูกเลยแม้แต่ครั้งเดียว', priority: 6, condition: (p, s) => s.guesses > 0 && s.correctGuesses === 0 },
+            { id: 'PACIFIST', emoji: '🕊️', title: 'ผู้รักสันติ', desc: 'จบเกมโดยไม่เคยลองสังหารใครเลย', priority: 6, condition: (p, s) => s.assassinateFails === 0 && s.assassinateSuccess === 0 },
+
+            // Priority 5 - General Gameplay Titles
+            { id: 'SHARPSHOOTER', emoji: '🧐', title: 'นักสืบสายแข็ง', desc: 'มีส่วนร่วมในการทายอย่างต่อเนื่อง', priority: 5, condition: (p, s) => s.guesses >= 5 },
+            { id: 'TANKER', emoji: '🛡️', title: 'โล่มนุษย์', desc: 'รับดาเมจไปเยอะที่สุดในเกม', priority: 5, condition: (p, s) => s.damageTaken > 0 && s.damageTaken === Math.max(...Object.values(players).map(pl => pl.stats.damageTaken || 0)) },
+            { id: 'GHOST', emoji: '👻', title: 'ผู้ไร้ตัวตน', desc: 'แทบไม่มีส่วนร่วมกับเกมเลย', priority: 5, condition: (p, s) => s.guesses <= 1 && p.status === 'defeated' },
+
+            // Priority 1 (Lowest) - Default Title
+            { id: 'DEFAULT_DEFEATED', emoji: '🪦', title: 'ผู้ล่วงลับ', desc: 'พยายามได้ดีมากแล้วเพื่อน', priority: 1, condition: (p, s) => p.status === 'defeated' }
+        ];
+
+        const guessHistory = Object.values(roomData.guessHistory || {});
+
         Object.entries(players).forEach(([id, player]) => {
-            const stats = player.stats || { guesses: 0, correctGuesses: 0, assassinateSuccess: 0, assassinateFails: 0, timeOuts: 0, damageTaken: 0, firstBlood: false };
-            let potentialTitles = [];
+            const stats = player.stats || {};
+            let bestTitle = null;
 
-            // --- หมวดผู้ชนะ ---
-            if (id === winnerId) {
-                if (player.hp === 3) potentialTitles.push({ p: 100, emoji: '🏆', title: 'แชมป์เปี้ยนไร้พ่าย', desc: 'ชนะอย่างสมบูรณ์แบบ โดยไม่เสียเลือดแม้แต่หยดเดียว' });
-                if (stats.assassinateSuccess > 0) potentialTitles.push({ p: 90, emoji: '⚡️', title: 'มือสังหารสายฟ้าแลบ', desc: 'ปิดเกมด้วยคมดาบแห่งตัวเลข' });
-                if (stats.guesses > 0 && (stats.correctGuesses / stats.guesses) > 0.5) potentialTitles.push({ p: 85, emoji: '🧠', title: 'จอมวางแผนอัจฉริยะ', desc: 'ทุกการคาดเดาล้วนมีความหมาย' });
-                potentialTitles.push({ p: 1, emoji: '👑', title: 'ผู้รอดชีวิตหนึ่งเดียว', desc: 'ยืนหนึ่งอย่างสมศักดิ์ศรี!' });
+            for (const title of titleDefinitions) {
+                if (title.condition({ id, ...player }, stats, guessHistory)) {
+                    if (!bestTitle || title.priority > bestTitle.priority) {
+                        bestTitle = title;
+                    }
+                }
             }
-            // --- หมวดมือสังหาร ---
-            if (stats.assassinateSuccess >= 2) potentialTitles.push({ p: 80, emoji: '🎯', title: 'เพชฌฆาตตาเหยี่ยว', desc: 'เมื่อถึงคราวสังหาร...ไม่เคยพลาด' });
-            if (stats.assassinateFails >= 2) potentialTitles.push({ p: 75, emoji: '🤡', title: 'มือสังหารจอมพลาดเป้า', desc: 'เกือบจะเท่แล้ว...ถ้าไม่พลาดเอง' });
-            if (stats.firstBlood) potentialTitles.push({ p: 70, emoji: '🔪', title: 'นักเชือดเลือดเย็น', desc: 'เป็นผู้เปิดฉากการนองเลือดในครั้งนี้' });
-            if (stats.assassinateFails > 0 && player.status === 'defeated' && player.hp <= 0) potentialTitles.push({ p: 65, emoji: '💣', title: 'ระเบิดพลีชีพ', desc: 'ยอมตายดีกว่าเสียศักดิ์ศรี!' });
-
-            // --- หมวดนักทาย ---
-            if (stats.timeOuts >= 2) potentialTitles.push({ p: 60, emoji: '🐢', title: 'นักคิดแห่งยุค', desc: 'คิดนานจนเพื่อนหลับหมดแล้ว' });
-            if (stats.guesses >= 15) potentialTitles.push({ p: 55, emoji: '🎲', title: 'นักเสี่ยงโชค', desc: 'ไม่สนฮินท์ เน้นเดาสุ่ม!' });
-            
-            // --- หมวดผู้ถูกกระทำและอื่นๆ ---
-            if (player.status === 'defeated' && player.hp === 0 && stats.assassinateSuccess === 0) potentialTitles.push({ p: 50, emoji: '🤕', title: 'กระสอบทรายเดินได้', desc: 'รับทุกการโจมตีจนตัวพรุน' });
-            if (id !== winnerId && player.hp === 1) potentialTitles.push({ p: 45, emoji: '🍀', title: 'คนดวงดี', desc: 'รอดมาได้แบบเส้นยาแดงผ่าแปด' });
-            if (player.status === 'defeated' && stats.guesses === 0) potentialTitles.push({ p: 40, emoji: '👻', title: 'ผู้ไร้ตัวตน', desc: 'มาเล่นจริงๆ ใช่ไหม?' });
-            
-            // --- ฉายาพื้นฐาน ---
-            if (player.status === 'defeated') potentialTitles.push({ p: 0, emoji: '🪦', title: 'ผู้ล่วงลับ', desc: 'พยายามได้ดีมากแล้วเพื่อน' });
-
-            // เลือกฉายาที่มี Priority สูงสุด
-            if (potentialTitles.length > 0) {
-                assignedTitles[id] = potentialTitles.sort((a, b) => b.p - a.p)[0];
-            } else {
-                 assignedTitles[id] = { emoji: '👤', title: 'ผู้เล่นทั่วไป', desc: 'เข้าร่วมการแข่งขันอย่างมีเกียรติ' };
-            }
+            assignedTitles[id] = bestTitle || { emoji: '💀', title: 'ผู้เล่นปริศนา', desc: 'ข้อมูลไม่เพียงพอ' };
         });
+
         return assignedTitles;
     }
 
+
     function showTitleCards(roomData, titles, onComplete) {
-        const playerIdsInOrder = Object.keys(titles).sort((a, b) => (b === roomData.winnerId) - (a === roomData.winnerId));
+        const playerIdsInOrder = Object.keys(titles).sort((a, b) => {
+            const priorityA = titles[a] ? titles[a].priority : 0;
+            const priorityB = titles[b] ? titles[b].priority : 0;
+            return priorityB - priorityA;
+        });
+
         let currentIndex = 0;
 
         function showNextCard() {
@@ -709,7 +737,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const playerData = roomData.players[playerId];
             const titleData = titles[playerId];
 
-            if (!playerData || !titleData) { currentIndex++; showNextCard(); return; }
+            if (!playerData || !titleData) {
+                currentIndex++;
+                showNextCard();
+                return;
+            }
 
             summaryElements.titleCard.emoji.textContent = titleData.emoji;
             summaryElements.titleCard.name.textContent = playerData.name;
@@ -717,11 +749,17 @@ document.addEventListener('DOMContentLoaded', () => {
             summaryElements.titleCard.desc.textContent = titleData.desc;
 
             summaryElements.titleCardOverlay.style.display = 'flex';
-            setTimeout(() => summaryElements.titleCardOverlay.classList.add('visible'), 10);
+            setTimeout(() => {
+                summaryElements.titleCardOverlay.classList.add('visible');
+            }, 10);
+
             setTimeout(() => {
                 summaryElements.titleCardOverlay.classList.remove('visible');
-                setTimeout(() => { currentIndex++; showNextCard(); }, 500);
-            }, 4000);
+                setTimeout(() => {
+                    currentIndex++;
+                    showNextCard();
+                }, 500);
+            }, 3500);
         }
         showNextCard();
     }
@@ -730,26 +768,23 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryElements.winner.textContent = `ผู้ชนะคือ: ${roomData.winnerName || 'ไม่มี'}`;
         summaryElements.playerList.innerHTML = '';
         Object.entries(roomData.players).forEach(([id, player]) => {
-            const card = document.createElement('div');
-            card.className = 'summary-player-card';
-            if (id === roomData.winnerId) card.classList.add('winner');
+            const item = document.createElement('div');
+            item.className = 'summary-player-card';
+            const isWinner = player.name === roomData.winnerName;
+            if(isWinner) item.classList.add('winner');
 
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'summary-player-info';
-            infoDiv.innerHTML = `<div class="player-name">${player.name}</div><div class="player-title">${titles[id] ? titles[id].title : ''}</div>`;
+            const title = titles[id] ? `<div class="player-title">${titles[id].title}</div>` : '';
+            const statusClass = isWinner ? 'win' : 'lose';
+            const statusText = isWinner ? 'ชนะ' : 'แพ้';
 
-            const statusDiv = document.createElement('div');
-            statusDiv.className = 'summary-player-status';
-            if (id === roomData.winnerId) {
-                statusDiv.classList.add('win');
-                statusDiv.textContent = 'ชนะ';
-            } else {
-                statusDiv.classList.add('lose');
-                statusDiv.textContent = 'แพ้';
-            }
-            card.appendChild(infoDiv);
-            card.appendChild(statusDiv);
-            summaryElements.playerList.appendChild(card);
+            item.innerHTML = `
+                <div class="summary-player-info">
+                    <div class="player-name">${player.name}</div>
+                    ${title}
+                </div>
+                <div class="summary-player-status ${statusClass}">${statusText}</div>
+            `;
+            summaryElements.playerList.appendChild(item);
         });
         navigateTo('summary');
     }
@@ -760,7 +795,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (playerRef) playerRef.remove();
         if (roomRef && roomListener) roomRef.off('value', roomListener);
         if (turnTimer) clearInterval(turnTimer);
+
         playerRef = null; roomRef = null; roomListener = null; currentRoomId = null; currentInput = '';
+        recentGuesses = [];
+
         navigateTo('preLobby');
     }
 
@@ -785,17 +823,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const digitCount = snapshot.val();
             if (currentInput.length < digitCount) {
                 currentInput += e.target.textContent;
-                gameElements.gameDisplay.textContent = currentInput;
+                gameElements.gameDisplay.textContent = currentInput.padEnd(digitCount, '_');
             }
         });
     }
 
     function handleDelete() {
         playSound(sounds.click);
-        currentInput = currentInput.slice(0, -1);
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
-            gameElements.gameDisplay.textContent = currentInput.padEnd(digitCount, '–');
+            currentInput = currentInput.slice(0, -1);
+            gameElements.gameDisplay.textContent = currentInput.padEnd(digitCount, '_');
         });
     }
 
@@ -818,7 +856,6 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         hasInteracted = false;
         sounds.background.pause();
-        sounds.background.currentTime = 0;
         leaveRoom();
         navigateTo('home');
     });
@@ -831,20 +868,38 @@ document.addEventListener('DOMContentLoaded', () => {
     inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
     gameElements.keypad.addEventListener('click', handleKeypadClick);
 
-    historyElements.toggleBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'flex'; });
-    historyElements.closeBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'none'; });
-
-    chatElements.toggleBtn.addEventListener('click', () => {
-        playSound(sounds.click);
-        chatElements.overlay.style.display = 'flex';
-        chatElements.unreadIndicator.style.display = 'none';
-        isChatOpen = true;
-        setTimeout(() => chatElements.body.scrollTop = chatElements.body.scrollHeight, 0);
+    [historyElements.toggleBtn, historyElements.closeBtn, historyElements.overlay].forEach(el => {
+        el.addEventListener('click', (e) => {
+            if (e.target === historyElements.overlay || e.target === historyElements.closeBtn || e.target === historyElements.toggleBtn) {
+                playSound(sounds.click);
+                historyElements.overlay.style.display = historyElements.overlay.style.display === 'flex' ? 'none' : 'flex';
+            }
+        });
     });
-    chatElements.closeBtn.addEventListener('click', () => { playSound(sounds.click); chatElements.overlay.style.display = 'none'; isChatOpen = false; });
 
-    buttons.settings.addEventListener('click', () => { playSound(sounds.click); settingsOverlay.style.display = 'flex'; });
-    document.getElementById('settings-close-btn').addEventListener('click', () => { playSound(sounds.click); settingsOverlay.style.display = 'none'; });
+    [chatElements.toggleBtn, chatElements.closeBtn, chatElements.overlay].forEach(el => {
+        el.addEventListener('click', (e) => {
+            if (e.target === chatElements.overlay || e.target === chatElements.closeBtn || e.target === chatElements.toggleBtn) {
+                playSound(sounds.click);
+                const isOpening = chatElements.overlay.style.display !== 'flex';
+                chatElements.overlay.style.display = isOpening ? 'flex' : 'none';
+                isChatOpen = isOpening;
+                if (isOpening) {
+                    chatElements.unreadIndicator.style.display = 'none';
+                    setTimeout(() => chatElements.body.scrollTop = chatElements.body.scrollHeight, 0);
+                }
+            }
+        });
+    });
+
+    [buttons.settings, settingsOverlay].forEach(el => {
+        el.addEventListener('click', (e) => {
+            if (e.target === settingsOverlay || e.target.closest('#btn-settings') || e.target.closest('.close-btn')) {
+                 playSound(sounds.click);
+                 settingsOverlay.style.display = settingsOverlay.style.display === 'flex' ? 'none' : 'flex';
+            }
+        });
+    });
 
     inputs.bgmToggle.addEventListener('change', (e) => {
         isBgmEnabled = e.target.checked;
@@ -857,7 +912,10 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
     });
 
-    // --- Initial Load ---
+    const savedPlayerName = sessionStorage.getItem('playerName');
+    if (savedPlayerName) {
+        playerNameInput.value = savedPlayerName;
+    }
     updateSoundSettings();
     navigateTo('home');
 });
