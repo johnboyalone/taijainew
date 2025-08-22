@@ -15,8 +15,28 @@ const database = firebase.database();
 let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
 let isChatOpen = false;
+let hasInteracted = false; // สำหรับเช็คการเล่นเสียงครั้งแรก
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    // --- Sound Effects ---
+    const sounds = {
+        background: new Audio('sounds/background-music.mp3'),
+        click: new Audio('sounds/click.mp3'),
+        win: new Audio('sounds/win-wow.mp3'),
+        wrong: new Audio('sounds/wrong-answer.mp3'),
+        yourTurn: new Audio('sounds/your-turn.mp3')
+    };
+    // ตั้งค่าเสียงพื้นหลัง
+    sounds.background.loop = true;
+    sounds.background.volume = 0.3;
+
+    // ฟังก์ชันกลางสำหรับเล่นเสียง
+    function playSound(sound) {
+        if (!hasInteracted) return; // ถ้าผู้ใช้ยังไม่เคยกดอะไรเลย จะยังไม่เล่นเสียง
+        sound.currentTime = 0;
+        sound.play().catch(e => console.log("ไม่สามารถเล่นเสียงได้:", e));
+    }
 
     // --- DOM Elements ---
     const pages = {
@@ -102,6 +122,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Lobby Logic ---
     function handleGoToPreLobby() {
+        playSound(sounds.click);
+        if (!hasInteracted) {
+            hasInteracted = true;
+            sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
+        }
         const name = inputs.playerName.value.trim();
         if (!name) { alert('กรุณากรอกชื่อ'); return; }
         playerName = name;
@@ -112,11 +137,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleGoToJoin() {
+        playSound(sounds.click);
         listenToRooms();
         navigateTo('lobbyJoin');
     }
 
     function createRoom() {
+        playSound(sounds.click);
         const roomName = inputs.roomName.value.trim() || `ห้องของ ${playerName}`;
         const newRoomRef = database.ref('rooms').push();
         currentRoomId = newRoomRef.key;
@@ -134,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function joinRoom(roomId, roomName) {
+        playSound(sounds.click);
         currentRoomId = roomId;
         roomRef = database.ref(`rooms/${currentRoomId}`);
         roomRef.child('players').once('value', snapshot => {
@@ -188,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const myPlayer = roomData.players[currentPlayerId];
             
-            // ซ่อนหน้าจอ "ถูกกำจัด" เมื่อเกมจบแล้ว
             if (roomData.status === 'finished') {
                 defeatedOverlay.style.display = 'none';
             } else if (myPlayer) {
@@ -264,7 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
         buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
 
         gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
-        if (isMyTurn) gameElements.turn.textContent += " (ตาของคุณ!)";
+        if (isMyTurn) {
+            gameElements.turn.textContent += " (ตาของคุณ!)";
+            playSound(sounds.yourTurn);
+        }
         if (targetPlayerId === currentPlayerId) { gameElements.turn.textContent = `คุณคือเป้าหมาย!`; gameElements.turn.style.color = '#dc3545'; }
 
         gameElements.timer.style.display = 'block';
@@ -282,6 +312,8 @@ document.addEventListener('DOMContentLoaded', () => {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
             if (currentInput.length !== roomData.config.digitCount) { alert(`ต้องใส่เลข ${roomData.config.digitCount} หลัก`); return; }
+
+            playSound(sounds.click);
 
             const { playerOrder, players, targetPlayerIndex, config } = roomData;
             const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
@@ -302,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updates[`/players/${targetPlayerId}/status`] = 'defeated';
                     updates[`/players/${targetPlayerId}/hp`] = 0;
                 } else {
+                    playSound(sounds.wrong);
                     const myHp = players[currentPlayerId].hp - 1;
                     updates[`/players/${currentPlayerId}/hp`] = myHp;
                     updates[`/players/${currentPlayerId}/stats/assassinateFails`] = (players[currentPlayerId].stats.assassinateFails || 0) + 1;
@@ -319,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
             gameElements.gameDisplay.textContent = '';
         });
     }
-
     function handleTimeOut(timedOutPlayerId) {
         const playerToUpdateRef = database.ref(`rooms/${currentRoomId}/players/${timedOutPlayerId}`);
         playerToUpdateRef.once('value', snapshot => {
@@ -432,6 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const message = inputs.chat.value.trim();
         if (!message) return;
         
+        playSound(sounds.click);
         const chatRef = database.ref(`rooms/${currentRoomId}/chat`).push();
         chatRef.set({
             senderId: currentPlayerId,
@@ -447,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const messages = Object.values(chatData).sort((a, b) => a.timestamp - b.timestamp);
         const lastMessage = messages[messages.length - 1];
 
-        if (lastMessage && lastMessage.senderId !== currentPlayerId && (Date.now() - lastMessage.timestamp < 7000)) {
+        if (lastMessage && lastMessage.senderId !== currentPlayerId && (Date.now() - lastMessage.timestamp < 6000)) {
             showChatMarquee(lastMessage);
         }
         if (!isChatOpen && lastMessage) {
@@ -472,13 +505,17 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.className = 'chat-marquee-item';
         marquee.textContent = `${msg.senderName}: ${msg.text}`;
         chatElements.marqueeContainer.appendChild(marquee);
-        setTimeout(() => marquee.remove(), 7000); // ลบตัวเองออกเมื่อ animation จบ
+        setTimeout(() => marquee.remove(), 6000);
     }
 
     // --- End Game Logic ---
     function endGame(roomData) {
         if (turnTimer) clearInterval(turnTimer);
         
+        if (roomData.winnerName !== "ไม่มีผู้ชนะ") {
+            playSound(sounds.win);
+        }
+
         const titles = assignTitles(roomData);
         
         showTitleCards(roomData, titles, () => {
@@ -565,6 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- General Functions ---
     function leaveRoom() {
+        playSound(sounds.click);
         if (playerRef) playerRef.remove();
         if (roomRef && roomListener) roomRef.off('value', roomListener);
         if (turnTimer) clearInterval(turnTimer);
@@ -575,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleReadyUp() {
+        playSound(sounds.click);
         if (!playerRef) return;
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
@@ -588,6 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleKeypadClick(e) {
         if (!e.target.classList.contains('key') || e.target.id === 'btn-delete' || e.target.id === 'btn-guess') return;
+        playSound(sounds.click);
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
             if (currentInput.length < digitCount) {
@@ -598,13 +638,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleDelete() {
+        playSound(sounds.click);
         currentInput = currentInput.slice(0, -1);
         gameElements.gameDisplay.textContent = currentInput;
     }
 
     // --- Event Listeners ---
     buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
-    buttons.goToCreate.addEventListener('click', () => navigateTo('lobbyCreate'));
+    buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
     buttons.goToJoin.addEventListener('click', handleGoToJoin);
     buttons.createRoom.addEventListener('click', createRoom);
     buttons.leaveRoom.addEventListener('click', leaveRoom);
@@ -615,22 +656,27 @@ document.addEventListener('DOMContentLoaded', () => {
     buttons.chatSend.addEventListener('click', handleSendChat);
     
     buttons.backToHome.addEventListener('click', () => {
+        playSound(sounds.click);
+        sounds.background.pause();
+        hasInteracted = false;
         leaveRoom();
         navigateTo('home');
     });
 
     buttons.playAgain.addEventListener('click', () => {
+        playSound(sounds.click);
         navigateTo('preLobby');
     });
 
     inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
     gameElements.keypad.addEventListener('click', handleKeypadClick);
 
-    historyElements.toggleBtn.addEventListener('click', () => historyElements.overlay.style.display = 'flex');
-    historyElements.closeBtn.addEventListener('click', () => historyElements.overlay.style.display = 'none');
-    historyElements.overlay.addEventListener('click', (e) => { if (e.target === historyElements.overlay) historyElements.overlay.style.display = 'none'; });
+    historyElements.toggleBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'flex'; });
+    historyElements.closeBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'none'; });
+    historyElements.overlay.addEventListener('click', (e) => { if (e.target === historyElements.overlay) { playSound(sounds.click); historyElements.overlay.style.display = 'none'; } });
 
     chatElements.toggleBtn.addEventListener('click', () => {
+        playSound(sounds.click);
         chatElements.overlay.style.display = 'flex';
         chatElements.unreadIndicator.style.display = 'none';
         isChatOpen = true;
@@ -639,11 +685,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 0);
     });
     chatElements.closeBtn.addEventListener('click', () => {
+        playSound(sounds.click);
         chatElements.overlay.style.display = 'none';
         isChatOpen = false;
     });
     chatElements.overlay.addEventListener('click', (e) => {
         if (e.target === chatElements.overlay) {
+            playSound(sounds.click);
             chatElements.overlay.style.display = 'none';
             isChatOpen = false;
         }
