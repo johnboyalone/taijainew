@@ -249,7 +249,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const myPlayer = roomData.players?.[currentPlayerId];
             if (!myPlayer && roomData.status !== 'finished') {
-                // I've been kicked or disconnected
                 return;
             }
 
@@ -259,20 +258,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameElements.setupSection.style.display = 'flex';
                 gameElements.gameplaySection.style.display = 'none';
                 gameElements.turnIndicator.textContent = `กำลังรอผู้เล่น... (${Object.keys(roomData.players).length}/${roomData.config.maxPlayers})`;
-                buttons.readyUp.disabled = myPlayer.isReady;
+                buttons.readyUp.disabled = myPlayer?.isReady || false;
                 checkIfGameCanStart(roomData);
             } else if (roomData.status === 'playing') {
-                const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
-                if (activePlayers.length <= 1 && roomData.status === 'playing') {
-                    endGameSequence(roomData);
-                } else {
-                    updateGameUI(roomData);
-                }
+                updateGameUI(roomData);
             } else if (roomData.status === 'finished') {
+                // The game has officially ended. The winner is decided.
+                // We just need to display the results.
                 if (!roomData.summaryShown) {
-                    endGameSequence(roomData);
-                } else {
-                    showSummaryPage(roomData, roomData.titles);
+                    // This state should ideally not be reached by clients anymore, but as a fallback:
+                    console.log("Client trying to show summary, but it should be handled by the winner.");
+                }
+                // The winner will trigger the title cards, and then everyone will see the summary page.
+                if (roomData.titles && !summaryElements.titleCardOverlay.classList.contains('visible')) {
+                     showSummaryPage(roomData, roomData.titles);
                 }
             }
         });
@@ -320,8 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const attackers = activePlayers.filter(id => id !== targetPlayerId);
         if (attackers.length === 0) { 
-             // This case should trigger game end, but as a fallback:
-            gameElements.turnIndicator.textContent = `รอผู้เล่นคนถัดไป...`;
             return; 
         }
 
@@ -332,7 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const isMyTurn = attackerPlayerId === currentPlayerId;
         const amIDefeated = myPlayer?.status === 'defeated';
 
-        // Update Turn Indicator Text
         if (isMyTurn) {
             gameElements.turnIndicator.innerHTML = `ถึงตาคุณแล้ว! <span style="font-weight:400; opacity:0.8;">(เป้าหมาย: ${targetPlayer.name})</span>`;
             playSound(sounds.turn);
@@ -342,20 +338,17 @@ document.addEventListener('DOMContentLoaded', () => {
             gameElements.turnIndicator.innerHTML = `<strong>${attackerPlayer.name}</strong> กำลังทาย <strong>${targetPlayer.name}</strong>`;
         }
 
-        // Highlight attacker and target
         document.querySelectorAll('.player-item').forEach(el => {
             el.classList.remove('is-attacker', 'is-target');
             if (el.dataset.playerId === attackerPlayerId) el.classList.add('is-attacker');
             if (el.dataset.playerId === targetPlayerId) el.classList.add('is-target');
         });
         
-        // Fire attack animation
         playAttackAnimation(attackerPlayerId, targetPlayerId);
 
         gameElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
         buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
 
-        // Timer Logic
         const startTime = turnStartTime || Date.now();
         turnTimer = setInterval(() => {
             const elapsed = (Date.now() - startTime) / 1000;
@@ -382,9 +375,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
             const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
             const targetPlayerId = activePlayers[currentTargetIndexInActive];
-            const targetPlayer = players[targetPlayerId];
-
-            const { bulls, cows } = calculateHints(currentInput, targetPlayer.secretNumber);
+            
+            const { bulls, cows } = calculateHints(currentInput, players[targetPlayerId].secretNumber);
             const isCorrect = bulls === config.digitCount;
 
             let updates = {};
@@ -432,44 +424,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             updates[`/players/${currentPlayerId}/stats`] = statsUpdate;
 
-            roomRef.update(updates).then(moveToNextTurn);
+            roomRef.update(updates).then(() => moveToNextTurn(roomData)); // Pass current roomData
             currentInput = '';
             gameElements.gameDisplay.textContent = '';
         });
     }
 
     function handleTimeOut(timedOutPlayerId) {
-        const playerToUpdateRef = database.ref(`rooms/${currentRoomId}/players/${timedOutPlayerId}`);
-        playerToUpdateRef.once('value', snapshot => {
-            const player = snapshot.val();
+        roomRef.once('value', snapshot => {
+            const roomData = snapshot.val();
+            const player = roomData.players[timedOutPlayerId];
             if (!player || player.status !== 'playing') return;
             
             const newHp = player.hp - 1;
-            let updates = { hp: newHp };
+            let updates = {};
+            updates[`/players/${timedOutPlayerId}/hp`] = newHp;
+            
             let statsUpdate = player.stats;
             statsUpdate.timeOuts = (statsUpdate.timeOuts || 0) + 1;
             statsUpdate.damageTaken = (statsUpdate.damageTaken || 0) + 1;
-            if (newHp <= 0) updates.status = 'defeated';
             
-            updates.stats = statsUpdate;
-            playerToUpdateRef.update(updates).then(moveToNextTurn);
+            if (newHp <= 0) {
+                updates[`/players/${timedOutPlayerId}/status`] = 'defeated';
+            }
+            
+            updates[`/players/${timedOutPlayerId}/stats`] = statsUpdate;
+            roomRef.update(updates).then(() => moveToNextTurn(roomData));
         });
     }
 
-    function moveToNextTurn() {
+    function moveToNextTurn(previousRoomData) {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
             if (roomData.status !== 'playing') return;
 
-            const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
-            const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-            if (activePlayers.length <= 1) { 
-                roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP }); 
-                return; 
+            const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
+            if (activePlayers.length <= 1) {
+                // THIS IS THE OFFICIAL TRIGGER FOR ENDING THE GAME
+                endGameSequence(roomData);
+                return;
             }
 
-            const currentTargetId = activePlayers[targetPlayerIndex % activePlayers.length];
-            const attackers = activePlayers.filter(id => id !== currentTargetId);
+            const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
+            const activePlayerIds = playerOrder.filter(id => players[id] && players[id].status === 'playing');
+            
+            const currentTargetId = activePlayerIds[targetPlayerIndex % activePlayerIds.length];
+            const attackers = activePlayerIds.filter(id => id !== currentTargetId);
 
             const nextAttackerIndex = (attackerTurnIndex + 1);
             if (nextAttackerIndex >= attackers.length) {
@@ -503,7 +503,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return { bulls, cows };
     }
 
-    // --- UI Updates ---
     function updatePlayerList(roomData) {
         const { players } = roomData;
         const playerListContainer = gameElements.playerListContainer;
@@ -557,7 +556,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         gameElements.attackAnimationContainer.appendChild(arrow);
 
-        // Animate movement
         requestAnimationFrame(() => {
             arrow.style.transition = 'transform 1s ease-out, opacity 1s ease-out';
             arrow.style.transform = `translate(${endX - startX}px, ${endY - startY}px) scale(1.5)`;
@@ -574,7 +572,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const logs = Object.values(historyData).sort((a, b) => b.timestamp - a.timestamp);
         
-        // Update recent guesses for unread indicator
         const oldRecentCount = recentGuesses.length;
         recentGuesses = logs.slice(0, 3).map(log => log.guess);
         if (logs.length > oldRecentCount && !historyElements.overlay.style.display) {
@@ -582,15 +579,20 @@ document.addEventListener('DOMContentLoaded', () => {
             historyElements.unreadIndicator.textContent = logs.length - oldRecentCount;
         }
 
+        const table = document.createElement('table');
+        table.className = 'history-table';
+        table.innerHTML = '<thead><tr><th>เลขที่ทาย</th><th>ผลลัพธ์</th></tr></thead>';
+        const tbody = document.createElement('tbody');
         logs.forEach(log => {
             const row = document.createElement('tr');
             const hints = `<span class="hint-bull">${log.bulls}</span>B <span class="hint-cow">${log.cows}</span>C`;
             row.innerHTML = `<td>${log.guess} ${log.isAssassination ? '💀' : ''}</td><td>${hints}</td>`;
-            historyElements.body.appendChild(row);
+            tbody.appendChild(row);
         });
+        table.appendChild(tbody);
+        historyElements.body.appendChild(table);
     }
 
-    // --- Chat Logic ---
     function handleSendChat() {
         const message = inputs.chat.value.trim();
         if (!message) return;
@@ -639,7 +641,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => marquee.remove(), 5800);
     }
 
-    // --- End Game Logic ---
     function endGameSequence(roomData) {
         if (turnTimer) clearInterval(turnTimer);
         
@@ -659,8 +660,10 @@ document.addEventListener('DOMContentLoaded', () => {
             status: 'finished',
             winnerName: winnerName,
             titles: titles,
-            summaryShown: true
+            summaryShown: true // This flag is now mainly for archival
         }).then(() => {
+            // Now that the final state is set, everyone will see it and react
+            // The winner (or anyone, really) can now trigger the title cards
             showTitleCards(roomData, titles, () => {
                 showSummaryPage(roomData, titles);
             });
@@ -668,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function assignTitles(roomData) {
-        const { players, config } = roomData;
+        const { players } = roomData;
         let titles = {};
         const playerArray = Object.entries(players).map(([id, data]) => ({ id, ...data }));
 
@@ -676,14 +679,12 @@ document.addEventListener('DOMContentLoaded', () => {
             stats = stats || {};
             let assignedTitle = null;
 
-            // Winner Title
             if (status === 'playing') {
                 if (stats.hp === 3) assignedTitle = { emoji: '🏆', title: 'ผู้ชนะไร้พ่าย', desc: 'จบเกมโดยไม่เสียเลือดแม้แต่หยดเดียว!' };
                 else if (stats.assassinateSuccess > 0) assignedTitle = { emoji: '👑', title: 'ราชาแห่งนักฆ่า', desc: 'สังหารศัตรูและคว้าชัยชนะมาครอง!' };
                 else assignedTitle = { emoji: '🥇', title: 'ผู้รอดชีวิตหนึ่งเดียว', desc: 'ยืนหนึ่งอย่างสมศักดิ์ศรี!' };
             }
             
-            // Loser Titles (Priority-based)
             if (!assignedTitle) {
                 if (stats.firstBlood) assignedTitle = { emoji: '🩸', title: 'เหยื่อรายแรก', desc: 'ถูกสังหารเป็นคนแรกของเกม' };
                 else if (stats.assassinateFails >= 2) assignedTitle = { emoji: '🤡', title: 'มือสังหารจอมพลาดเป้า', desc: 'เกือบจะเท่แล้ว...ถ้าไม่พลาดเอง' };
@@ -759,7 +760,6 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('summary');
     }
 
-    // --- General Functions ---
     function leaveRoom(isDisconnected = false) {
         playSound(sounds.click);
         if (playerRef) playerRef.remove();
@@ -846,7 +846,6 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('preLobby');
     });
 
-    // Modal Listeners
     [historyElements, chatElements, settingsElements].forEach(modal => {
         modal.toggleBtn?.addEventListener('click', () => {
             playSound(sounds.click);
@@ -871,7 +870,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Sound Settings Listeners
     settingsElements.bgmToggle.addEventListener('change', (e) => {
         isBgmEnabled = e.target.checked;
         localStorage.setItem('isBgmEnabled', isBgmEnabled);
@@ -883,7 +881,6 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
     });
 
-    // --- Initial Load ---
     const savedPlayerName = sessionStorage.getItem('playerName');
     if (savedPlayerName) {
         inputs.playerName.value = savedPlayerName;
