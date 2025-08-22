@@ -16,6 +16,9 @@ let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput 
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
 let isChatOpen = false;
 let hasInteracted = false; // สำหรับเช็คการเล่นเสียงครั้งแรก
+let isBgMusicEnabled = true;
+let isSfxEnabled = true;
+
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -33,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ฟังก์ชันกลางสำหรับเล่นเสียง
     function playSound(sound) {
-        if (!hasInteracted) return; // ถ้าผู้ใช้ยังไม่เคยกดอะไรเลย จะยังไม่เล่นเสียง
+        if (!hasInteracted || !isSfxEnabled) return; // เช็คว่าเปิด SFX อยู่ไหม
         sound.currentTime = 0;
         sound.play().catch(e => console.log("ไม่สามารถเล่นเสียงได้:", e));
     }
@@ -125,7 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         if (!hasInteracted) {
             hasInteracted = true;
-            sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
+            if (isBgMusicEnabled) { // เช็คก่อนเล่น
+                sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
+            }
         }
         const name = inputs.playerName.value.trim();
         if (!name) { alert('กรุณากรอกชื่อ'); return; }
@@ -293,9 +298,12 @@ document.addEventListener('DOMContentLoaded', () => {
         gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
-            playSound(sounds.yourTurn);
+            playSound(sounds.yourTurn); // ย้ายมาไว้ตรงนี้
         }
-        if (targetPlayerId === currentPlayerId) { gameElements.turn.textContent = `คุณคือเป้าหมาย!`; gameElements.turn.style.color = '#dc3545'; }
+        if (targetPlayerId === currentPlayerId) { 
+            gameElements.turn.textContent = `คุณคือเป้าหมาย!`; 
+            gameElements.turn.style.color = '#dc3545'; 
+        }
 
         gameElements.timer.style.display = 'block';
         turnTimer = setInterval(() => {
@@ -696,6 +704,47 @@ document.addEventListener('DOMContentLoaded', () => {
             isChatOpen = false;
         }
     });
+
+    // Settings Modal Listeners
+    const settingsToggleBtn = document.getElementById('settings-toggle-btn');
+    const settingsOverlay = document.getElementById('settings-modal-overlay');
+    const settingsCloseBtn = document.getElementById('settings-close-btn');
+    const bgMusicToggle = document.getElementById('toggle-bg-music');
+    const sfxToggle = document.getElementById('toggle-sfx');
+
+    settingsToggleBtn.addEventListener('click', () => {
+        playSound(sounds.click);
+        settingsOverlay.style.display = 'flex';
+    });
+
+    settingsCloseBtn.addEventListener('click', () => {
+        playSound(sounds.click);
+        settingsOverlay.style.display = 'none';
+    });
+
+    settingsOverlay.addEventListener('click', (e) => {
+        if (e.target === settingsOverlay) {
+            playSound(sounds.click);
+            settingsOverlay.style.display = 'none';
+        }
+    });
+
+    bgMusicToggle.addEventListener('change', (e) => {
+        isBgMusicEnabled = e.target.checked;
+        if (isBgMusicEnabled && hasInteracted) {
+            sounds.background.play().catch(err => console.log(err));
+        } else {
+            sounds.background.pause();
+        }
+    });
+
+    sfxToggle.addEventListener('change', (e) => {
+        isSfxEnabled = e.target.checked;
+        if (isSfxEnabled) {
+            playSound(sounds.click); // เล่นเสียงคลิกเพื่อยืนยันว่าเปิดแล้ว
+        }
+    });
+
 
     // --- Initial Load ---
     const savedPlayerName = sessionStorage.getItem('playerName');
