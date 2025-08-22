@@ -66,14 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
         playAgain: document.getElementById('btn-play-again')
     };
     const gameElements = {
-        roomName: document.getElementById('game-room-name'),
+        // roomName: document.getElementById('game-room-name'), // No longer in layout
         playerList: document.getElementById('player-list'),
         setupSection: document.getElementById('setup-section'),
         waitingSection: document.getElementById('waiting-section'),
         gameplaySection: document.getElementById('gameplay-section'),
         gameDisplay: document.getElementById('game-display'),
         keypad: document.querySelector('.keypad'),
-        timerBar: document.getElementById('timer-indicator-bar'), // Updated for progress bar
+        timerBar: document.getElementById('timer-indicator-bar'),
         target: document.getElementById('target-indicator'),
         turn: document.getElementById('turn-indicator'),
         mySecretNumber: document.querySelector('#my-secret-number-display span')
@@ -134,12 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function navigateTo(pageName) {
         Object.values(pages).forEach(p => p.style.display = 'none');
         if (pages[pageName]) {
-            // Use flex for pages that need centering
-            if (['home', 'preLobby', 'lobbyCreate', 'lobbyJoin', 'summary'].includes(pageName)) {
-                pages[pageName].style.display = 'flex';
-            } else {
-                pages[pageName].style.display = 'block';
-            }
+            pages[pageName].style.display = 'flex'; // Use flex for all pages now
         }
     }
 
@@ -196,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
                 playerRef.set({ name: playerName, isReady: false, hp: 3, status: 'playing', stats: { guesses: 0, assassinateFails: 0, timeOuts: 0 } });
                 playerRef.onDisconnect().remove();
-                document.getElementById('game-room-name').textContent = `ห้อง: ${roomName}`;
+                // document.getElementById('game-room-name').textContent = `ห้อง: ${roomName}`; // No longer in layout
                 listenToRoomUpdates();
                 navigateTo('game');
             });
@@ -249,11 +244,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (roomData.status === 'waiting') {
-                gameElements.setupSection.style.display = myPlayer?.isReady ? 'none' : 'block';
-                gameElements.waitingSection.style.display = myPlayer?.isReady ? 'block' : 'none';
+                gameElements.setupSection.style.display = 'block'; // Simplified view logic
+                gameElements.waitingSection.style.display = 'none';
                 gameElements.gameplaySection.style.display = 'none';
                 checkIfGameCanStart(roomData);
             } else if (roomData.status === 'playing') {
+                gameElements.setupSection.style.display = 'none';
+                gameElements.waitingSection.style.display = 'none';
+                gameElements.gameplaySection.style.display = 'block';
+                
                 const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
                 if (activePlayers.length <= 1) {
                     const winner = activePlayers.length === 1 ? activePlayers[0] : null;
@@ -317,10 +316,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateGameUI(roomData) {
-        gameElements.setupSection.style.display = 'none';
-        gameElements.waitingSection.style.display = 'none';
-        gameElements.gameplaySection.style.display = 'block';
-
         if (turnTimer) clearInterval(turnTimer);
 
         const { playerOrder, players, targetPlayerIndex, attackerTurnIndex, config, turnStartTime } = roomData;
@@ -485,6 +480,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePlayerList(roomData) {
         const { players, status, playerOrder, targetPlayerIndex, attackerTurnIndex } = roomData;
         const playerListEl = gameElements.playerList;
+        
+        // Clear old players but keep the animation container
         Array.from(playerListEl.getElementsByClassName('player-item')).forEach(el => el.remove());
 
         if (!players) return;
@@ -561,6 +558,9 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
+            if (currentInput.length === 0 || gameElements.gameDisplay.textContent === '----') {
+                currentInput = '';
+            }
             if (currentInput.length < digitCount) {
                 currentInput += e.target.textContent;
                 gameElements.gameDisplay.textContent = currentInput;
@@ -604,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const openSettings = () => { playSound(sounds.click); settingsElements.overlay.style.display = 'flex'; };
     const closeSettings = () => { playSound(sounds.click); settingsElements.overlay.style.display = 'none'; };
     settingsElements.openBtnHome.addEventListener('click', openSettings);
-    settingsElements.openBtnGame.addEventListener('click', openSettings);
+    // settingsElements.openBtnGame.addEventListener('click', openSettings); // No longer in layout
     settingsElements.closeBtn.addEventListener('click', closeSettings);
     settingsElements.overlay.addEventListener('click', (e) => { if (e.target === settingsElements.overlay) closeSettings(); });
     settingsElements.toggleBgm.addEventListener('change', (e) => {
