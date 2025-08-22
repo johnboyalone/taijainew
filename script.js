@@ -293,6 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
+            // Play sound only on the current player's device
             playSound(sounds.yourTurn);
         }
         if (targetPlayerId === currentPlayerId) { gameElements.turn.textContent = `คุณคือเป้าหมาย!`; gameElements.turn.style.color = '#dc3545'; }
@@ -307,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updatePersonalHistory(roomData);
     }
-
     function handleAction(isAssassination) {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
