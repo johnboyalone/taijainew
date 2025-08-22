@@ -14,29 +14,48 @@
             <h1>เกมทายเลข</h1>
             <p>สร้างห้อง หรือเข้าร่วมห้องกับเพื่อน</p>
             <input type="text" id="input-player-name" placeholder="กรอกชื่อของคุณ">
-            <button id="btn-go-to-lobby" class="btn btn-primary">เข้าสู่ล็อบบี้</button>
+            <button id="btn-go-to-pre-lobby" class="btn btn-primary">ต่อไป</button>
         </div>
     </div>
 
-    <!-- Page: Lobby -->
-    <div id="page-lobby" class="page" style="display: none;">
+    <!-- Page: Pre-Lobby -->
+    <div id="page-pre-lobby" class="page" style="display: none;">
         <div class="container">
-            <h2>ล็อบบี้ - ยินดีต้อนรับ, <span id="lobby-player-name"></span></h2>
+            <h2>ยินดีต้อนรับ, <span id="pre-lobby-player-name"></span></h2>
+            <p>คุณต้องการทำอะไร?</p>
+            <div class="pre-lobby-buttons">
+                <button id="btn-go-to-create" class="btn btn-success btn-large">สร้างห้อง</button>
+                <button id="btn-go-to-join" class="btn btn-primary btn-large">เข้าร่วมห้อง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page: Lobby (Create Room) -->
+    <div id="page-lobby-create" class="page" style="display: none;">
+        <div class="container">
+            <h2>สร้างห้องใหม่</h2>
             <div class="card">
-                <h3>สร้างห้องใหม่</h3>
                 <input type="text" id="input-room-name" placeholder="ชื่อห้อง (เว้นว่างเพื่อใช้ชื่ออัตโนมัติ)">
                 <div class="config-grid">
                     <label>ผู้เล่นสูงสุด: <input type="number" id="input-max-players" value="4" min="2" max="6"></label>
                     <label>จำนวนเลข: <input type="number" id="input-digit-count" value="4" min="3" max="6"></label>
                     <label>เวลา/ตา (วิ): <input type="number" id="input-turn-time" value="30" min="10" max="90"></label>
                 </div>
-                <button id="btn-create-room" class="btn btn-success">สร้างห้อง</button>
+                <button id="btn-create-room" class="btn btn-success">ยืนยันการสร้างห้อง</button>
+                <button class="btn btn-secondary" onclick="navigateTo('pre-lobby')">ย้อนกลับ</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Page: Lobby (Join Room) -->
+    <div id="page-lobby-join" class="page" style="display: none;">
+        <div class="container">
+            <h2>เข้าร่วมห้อง</h2>
             <div class="card">
-                <h3>เข้าร่วมห้อง</h3>
                 <div id="room-list-container">
                     <p>กำลังโหลดห้อง...</p>
                 </div>
+                <button class="btn btn-secondary" onclick="navigateTo('pre-lobby')">ย้อนกลับ</button>
             </div>
         </div>
     </div>
@@ -52,20 +71,17 @@
                 </div>
             </div>
             
-            <!-- Setup Section -->
             <div id="setup-section">
                 <p>กด "พร้อม" เพื่อสุ่มเลขลับและเริ่มรอผู้เล่นคนอื่น</p>
                 <button id="btn-ready-up" class="btn btn-primary">พร้อม!</button>
             </div>
 
-            <!-- Waiting Section -->
             <div id="waiting-section" style="display: none;">
                 <h3>ยอดเยี่ยม!</h3>
-                <p>กำลังรอผู้เล่นคนอื่นตั้งค่า...</p>
+                <p>กำลังรอเพื่อนกดเริ่ม...</p>
                 <div class="loader"></div>
             </div>
 
-            <!-- Gameplay Section -->
             <div id="gameplay-section" style="display: none;">
                 <div id="my-secret-number-display">เลขลับของคุณ: <span>- - - -</span></div>
                 <div id="player-list"></div>
@@ -86,29 +102,18 @@
             <button id="btn-leave-room" class="btn btn-danger">ออกจากห้อง</button>
         </div>
         
-        <!-- History Modal -->
+        <!-- Modals are now INSIDE the game page -->
         <div id="history-modal-overlay" class="modal-overlay" style="display: none;">
             <div id="history-modal" class="modal-content">
-                <div class="modal-header">
-                    <h3>ประวัติการทายของคุณ</h3>
-                    <button id="history-close-btn" class="modal-close-btn">&times;</button>
-                </div>
+                <div class="modal-header"><h3>ประวัติการทายของคุณ</h3><button id="history-close-btn" class="modal-close-btn">&times;</button></div>
                 <div id="history-modal-body"></div>
             </div>
         </div>
-
-        <!-- Chat Modal -->
         <div id="chat-modal-overlay" class="modal-overlay" style="display: none;">
             <div id="chat-modal" class="modal-content">
-                <div class="modal-header">
-                    <h3>แชทในห้อง</h3>
-                    <button id="chat-close-btn" class="modal-close-btn">&times;</button>
-                </div>
+                <div class="modal-header"><h3>แชทในห้อง</h3><button id="chat-close-btn" class="modal-close-btn">&times;</button></div>
                 <div id="chat-modal-body"></div>
-                <div id="chat-modal-footer">
-                    <input type="text" id="chat-input" placeholder="พิมพ์ข้อความ...">
-                    <button id="chat-send-btn">ส่ง</button>
-                </div>
+                <div id="chat-modal-footer"><input type="text" id="chat-input" placeholder="พิมพ์ข้อความ..."><button id="chat-send-btn">ส่ง</button></div>
             </div>
         </div>
     </div>
