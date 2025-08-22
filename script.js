@@ -81,7 +81,7 @@ function listenToRoomUpdates() {
     roomListener = roomRef.on('value', snapshot => {
         if (!snapshot.exists()) { alert('ห้องถูกปิดแล้ว'); leaveRoom(); return; }
         const roomData = snapshot.val();
-        updatePlayerList(roomData.players, roomData.config);
+        updatePlayerList(roomData.players);
         if (roomData.status === 'waiting') checkIfGameCanStart(roomData);
         else if (roomData.status === 'playing' || roomData.status === 'finished') updateGameUI(roomData);
     });
@@ -114,6 +114,7 @@ function updateGameUI(roomData) {
     if (turnTimer) clearInterval(turnTimer);
 
     const { playerOrder, players, targetPlayerIndex, attackerTurnIndex, status, config, turnStartTime } = roomData;
+    
     const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
     
     if (activePlayers.length <= 1 && status === 'playing') {
@@ -130,18 +131,19 @@ function updateGameUI(roomData) {
         return;
     }
 
-    const currentTargetIndex = targetPlayerIndex % activePlayers.length;
-    const targetPlayerId = activePlayers[currentTargetIndex];
+    const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
+    const targetPlayerId = activePlayers[currentTargetIndexInActive];
     const targetPlayerName = players[targetPlayerId].name;
     gameElements.target.textContent = `เป้าหมาย: ${targetPlayerName}`;
 
     const attackers = activePlayers.filter(id => id !== targetPlayerId);
-    if (attackers.length === 0) { // If only one player left, they win.
+    if (attackers.length === 0) {
         roomRef.update({ status: 'finished', winnerName: targetPlayerName });
         return;
     }
-    const currentAttackerIndex = attackerTurnIndex % attackers.length;
-    const attackerPlayerId = attackers[currentAttackerIndex];
+    
+    const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
+    const attackerPlayerId = attackers[currentAttackerIndexInAttackers];
     const attackerPlayerName = players[attackerPlayerId].name;
     gameElements.turn.textContent = `ผู้ทาย: ${attackerPlayerName}`;
 
@@ -155,7 +157,6 @@ function updateGameUI(roomData) {
         gameElements.turn.style.color = '#dc3545';
     }
 
-    // Timer Logic
     gameElements.timer.style.display = 'block';
     turnTimer = setInterval(() => {
         const elapsed = (Date.now() - turnStartTime) / 1000;
@@ -174,13 +175,11 @@ function handleTimeOut(timedOutPlayerId) {
     const playerToUpdateRef = database.ref(`rooms/${currentRoomId}/players/${timedOutPlayerId}`);
     playerToUpdateRef.once('value', snapshot => {
         const player = snapshot.val();
-        if (!player || player.status !== 'playing') return; // Avoid race conditions
+        if (!player || player.status !== 'playing') return;
         const newHp = player.hp - 1;
-        if (newHp <= 0) {
-            playerToUpdateRef.update({ hp: 0, status: 'defeated' }).then(moveToNextTurn);
-        } else {
-            playerToUpdateRef.update({ hp: newHp }).then(moveToNextTurn);
-        }
+        let updates = { hp: newHp };
+        if (newHp <= 0) updates.status = 'defeated';
+        playerToUpdateRef.update(updates).then(moveToNextTurn);
     });
 }
 
@@ -191,26 +190,22 @@ function handleGuess() {
 
         const { playerOrder, players, targetPlayerIndex, attackerTurnIndex, config } = roomData;
         const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-        const currentTargetIndex = targetPlayerIndex % activePlayers.length;
-        const targetPlayerId = activePlayers[currentTargetIndex];
+        const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
+        const targetPlayerId = activePlayers[currentTargetIndexInActive];
         const targetPlayer = players[targetPlayerId];
-        const attackers = activePlayers.filter(id => id !== targetPlayerId);
-        const currentAttackerIndex = attackerTurnIndex % attackers.length;
-        const attackerPlayerId = attackers[currentAttackerIndex];
 
         const { bulls, cows } = calculateHints(currentInput, targetPlayer.secretNumber);
-        const newLog = { attackerId: attackerPlayerId, targetId: targetPlayerId, guess: currentInput, bulls, cows };
+        const newLog = { attackerId: currentPlayerId, targetId: targetPlayerId, guess: currentInput, bulls, cows };
         const newHistory = roomData.guessHistory ? [...roomData.guessHistory, newLog] : [newLog];
 
         let updates = { guessHistory: newHistory };
 
-        if (bulls === config.digitCount) { // Correct guess, target is defeated
+        if (bulls === config.digitCount) {
             updates[`/players/${targetPlayerId}/status`] = 'defeated';
             updates[`/players/${targetPlayerId}/hp`] = 0;
-            roomRef.update(updates).then(moveToNextTurn);
-        } else {
-            roomRef.update(updates).then(moveToNextTurn);
         }
+        
+        roomRef.update(updates).then(moveToNextTurn);
         currentInput = '';
         gameElements.gameDisplay.textContent = '';
     });
@@ -221,19 +216,19 @@ function moveToNextTurn() {
         const roomData = snapshot.val();
         const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
         const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-        if (activePlayers.length <= 1) return; // Game will end on next update
+        if (activePlayers.length <= 1) { roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP }); return; }
 
         const currentTargetId = activePlayers[targetPlayerIndex % activePlayers.length];
         const attackers = activePlayers.filter(id => id !== currentTargetId);
 
         const nextAttackerIndex = (attackerTurnIndex + 1);
-        if (nextAttackerIndex >= attackers.length) { // End of round, switch target
+        if (nextAttackerIndex >= attackers.length) {
             roomRef.update({
-                targetPlayerIndex: (targetPlayerIndex + 1), // Don't use modulo here, let updateUI handle it
+                targetPlayerIndex: (targetPlayerIndex + 1),
                 attackerTurnIndex: 0,
                 turnStartTime: firebase.database.ServerValue.TIMESTAMP
             });
-        } else { // Next attacker's turn
+        } else {
             roomRef.update({
                 attackerTurnIndex: nextAttackerIndex,
                 turnStartTime: firebase.database.ServerValue.TIMESTAMP
@@ -246,9 +241,7 @@ function calculateHints(guess, secret) {
     let bulls = 0, cows = 0;
     const secretChars = secret.split('');
     const guessChars = guess.split('');
-    const secretCounts = {};
-
-    // First pass for bulls
+    
     for (let i = guessChars.length - 1; i >= 0; i--) {
         if (guessChars[i] === secretChars[i]) {
             bulls++;
@@ -256,7 +249,8 @@ function calculateHints(guess, secret) {
             guessChars.splice(i, 1);
         }
     }
-    // Second pass for cows
+    
+    const secretCounts = {};
     secretChars.forEach(c => secretCounts[c] = (secretCounts[c] || 0) + 1);
     guessChars.forEach(c => {
         if (secretCounts[c] > 0) {
@@ -279,7 +273,9 @@ function updatePlayerList(players) {
         const hpBar = `<div class="hp-bar">${[...Array(3)].map((_, i) => `<div class="hp-point ${i < player.hp ? '' : 'lost'}"></div>`).join('')}</div>`;
         const readyStatus = player.isReady ? `<span class="btn-ready">READY</span>` : '';
         item.innerHTML = `${nameSpan} ${player.isReady ? hpBar : readyStatus}`;
-        if (player.status === 'defeated') item.querySelector('.hp-bar').style.display = 'none';
+        if (player.status === 'defeated' && item.querySelector('.hp-bar')) {
+            item.querySelector('.hp-bar').style.display = 'none';
+        }
         gameElements.playerList.appendChild(item);
     });
 }
@@ -333,21 +329,27 @@ function handleReadyUp() {
     if (!playerRef) return;
     roomRef.child('config/digitCount').once('value', snapshot => {
         const digitCount = snapshot.val();
-        const min = Math.pow(10, digitCount - 1);
         let secretNumber = '';
-        for (let i = 0; i < digitCount; i++) {
-            secretNumber += Math.floor(Math.random() * 10);
+        const usedDigits = new Set();
+        while (secretNumber.length < digitCount) {
+            const digit = Math.floor(Math.random() * 10).toString();
+            if (!usedDigits.has(digit)) {
+                secretNumber += digit;
+                usedDigits.add(digit);
+            }
         }
         playerRef.update({ isReady: true, secretNumber: secretNumber });
         gameElements.setupSection.style.display = 'none';
         gameElements.waitingSection.style.display = 'block';
-        alert(`เลขลับ ${digitCount} หลักของคุณคือ ${secretNumber} (ระบบจะจำไว้ให้)`);
+        alert(`เลขลับ ${digitCount} หลัก (ไม่ซ้ำกัน) ของคุณคือ ${secretNumber} (ระบบจะจำไว้ให้)`);
     });
 }
 
 function handleKeypadClick(e) {
     if (e.target.closest('.keypad.disabled')) return;
     if (!e.target.classList.contains('key')) return;
+    if (e.target.id === 'btn-guess' || e.target.id === 'btn-delete') return;
+    
     roomRef.child('config/digitCount').once('value', snapshot => {
         const digitCount = snapshot.val();
         if (currentInput.length >= digitCount) return;
