@@ -112,3 +112,213 @@ h1, h2, h3 {
     margin: 0;
     border: none;
     border-radius: 0;
+    padding: 18px 25px;
+    font-size: 1.1rem;
+    background-color: #E0E0E0;
+    color: #333;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.input-group button:hover { background-color: #D1D1D1; }
+
+/* --- Game Status Display --- */
+.turn-info { margin-bottom: 20px; }
+#turn-indicator {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+#target-indicator {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+
+/* --- Player Grid Layout --- */
+#player-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 25px;
+    position: relative;
+}
+
+.player-item {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    background-color: rgba(255, 255, 255, 0.05);
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+
+.player-item.attacker {
+    border-color: var(--special-danger);
+    box-shadow: 0 0 12px var(--special-danger);
+    transform: scale(1.05);
+}
+
+.player-item.target {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 12px var(--primary-color);
+    transform: scale(1.05);
+}
+
+.player-defeated {
+    opacity: 0.5;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-style: dashed;
+}
+
+.player-info { font-size: 1rem; font-weight: 500; }
+.player-item .hp-bar { display: flex; gap: 4px; margin-top: 5px; }
+.player-item .hp-point { width: 12px; height: 12px; background-color: #ffafcc; border-radius: 50%; }
+.player-item .hp-point.lost { background: #6A6E94; }
+
+/* --- Animation: Attacker to Target --- */
+#attack-animation-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+}
+.attack-arrow {
+    position: absolute;
+    color: #ffb703;
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-shadow: 0 0 5px white;
+    animation: move-arrow 1.5s linear infinite;
+    opacity: 0;
+}
+@keyframes move-arrow {
+    0% { opacity: 1; offset-distance: 0%; }
+    90% { opacity: 1; }
+    100% { opacity: 0; offset-distance: 100%; }
+}
+
+/* --- Secret Number & Guessing Area --- */
+.secret-number-area, .guess-input-area {
+    background-color: var(--content-bg);
+    border-radius: var(--border-radius-main);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+#my-secret-number-display {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+#my-secret-number-display span {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: 500;
+    letter-spacing: 8px;
+    color: var(--text-bright);
+}
+
+#timer-indicator {
+    width: 100%;
+    height: 6px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    margin-bottom: 15px;
+    overflow: hidden;
+}
+#timer-indicator-bar {
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(to right, #ffafcc, var(--special-danger));
+    border-radius: 3px;
+    transition: width 0.5s linear;
+}
+
+#game-display {
+    font-size: 2.5rem;
+    font-weight: 500;
+    letter-spacing: 10px;
+    color: var(--text-bright);
+    padding: 10px 0;
+}
+
+/* --- Keypad --- */
+.keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 15px;
+}
+.key {
+    padding: 18px;
+    font-size: 1.6rem;
+    font-weight: 400;
+    border-radius: var(--border-radius-main);
+    border: 1px solid var(--border-color);
+    background-color: transparent;
+    color: var(--text-bright);
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+.key:active {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(0.95);
+}
+
+/* --- Action Buttons --- */
+#btn-delete, #btn-guess {
+    font-size: 1.2rem;
+    font-weight: 500;
+    border: none;
+    color: var(--text-dark);
+}
+#btn-delete { background-color: var(--warning-color); }
+#btn-guess { background-color: var(--success-color); }
+
+#btn-assassinate {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: var(--border-radius-main);
+    font-size: 1.2rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 10px;
+    background-color: var(--special-danger);
+    color: var(--text-bright);
+    transition: all 0.2s ease;
+}
+#btn-assassinate:active {
+    transform: scale(0.98);
+    filter: brightness(1.1);
+}
+
+/* --- Other elements adapted to the dark theme --- */
+.modal-overlay {
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+}
+.modal-content {
+    background-color: var(--content-bg);
+    color: var(--text-bright);
+    border: 1px solid var(--border-color);
+}
+.modal-header { border-bottom-color: var(--border-color); }
+.close-btn { color: var(--text-muted); }
+
+.chat-message.theirs { background-color: #6A6E94; }
+.chat-message.mine { background-color: var(--primary-color); color: var(--text-dark); }
+#chat-input { background-color: var(--main-bg); border-color: var(--border-color); color: var(--text-bright); }
+#chat-send-btn { background-color: var(--primary-color); color: var(--text-dark); }
+
+/* Hide elements not present in the new layout for clarity */
+.game-header { display: none; }
+.game-section { background: none; box-shadow: none; padding: 0; }
+#btn-leave-room { background-color: var(--content-bg); }
