@@ -35,6 +35,7 @@ const gameElements = {
     gameplaySection: document.getElementById('gameplay-section'),
     gameDisplay: document.getElementById('game-display'),
     keypad: document.querySelector('.keypad'),
+    targetIndicator: document.getElementById('target-indicator'), // NEW
     turnIndicator: document.getElementById('turn-indicator'),
     guessLog: document.getElementById('guess-log')
 };
@@ -102,49 +103,69 @@ function listenToRoomUpdates() {
 
 function checkIfGameCanStart(roomData) {
     const players = roomData.players || {};
-    const playerArray = Object.values(players);
-    if (playerArray.length < 2) return;
-    const allReady = playerArray.every(p => p.isReady === true);
+    const playerIds = Object.keys(players);
+    if (playerIds.length < 2) return; // Need at least 2 players
+    const allReady = Object.values(players).every(p => p.isReady === true);
     if (allReady) {
-        startGame(Object.keys(players));
+        startGame(playerIds);
     }
 }
 
 function startGame(playerIds) {
+    // New Game Logic: Set up for "Mob Guessing" mode
     roomRef.update({
         status: 'playing',
-        turnOrder: playerIds,
-        currentPlayerTurnIndex: 0,
+        playerOrder: playerIds, // The master order of all players
+        targetPlayerIndex: 0,  // The first player is the first target
+        attackerTurnIndex: 0, // The first attacker's turn
         guessHistory: []
     });
 }
 
 function updateGameUI(roomData) {
-    // *** FIX: Ensure everyone moves to the gameplay screen ***
     gameElements.setupSection.style.display = 'none';
     gameElements.waitingSection.style.display = 'none';
     gameElements.gameplaySection.style.display = 'block';
 
-    const turnIndex = roomData.currentPlayerTurnIndex;
-    const playerTurnId = roomData.turnOrder[turnIndex];
-    const playerTurnName = roomData.players[playerTurnId].name;
+    const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
+    
+    // Determine who is the target
+    const targetPlayerId = playerOrder[targetPlayerIndex];
+    const targetPlayerName = players[targetPlayerId].name;
+    gameElements.targetIndicator.textContent = `เป้าหมายรอบนี้: ${targetPlayerName}`;
 
-    // *** FIX: Display whose turn it is clearly ***
-    gameElements.turnIndicator.textContent = `ตาของ: ${playerTurnName}`;
+    // Determine who are the attackers
+    const attackers = playerOrder.filter(id => id !== targetPlayerId);
+    if (attackers.length === 0) return; // Should not happen in a 2+ player game
 
-    if (playerTurnId === currentPlayerId) {
+    // Determine whose turn it is to attack
+    const attackerPlayerId = attackers[attackerTurnIndex];
+    const attackerPlayerName = players[attackerPlayerId].name;
+    gameElements.turnIndicator.textContent = `ผู้ทาย: ${attackerPlayerName}`;
+
+    // Enable/disable controls
+    if (attackerPlayerId === currentPlayerId) {
         gameElements.keypad.classList.remove('disabled');
         buttons.guess.disabled = false;
         gameElements.turnIndicator.textContent += " (ตาของคุณ!)";
-        gameElements.turnIndicator.style.color = '#28a745'; // Green for your turn
+        gameElements.turnIndicator.style.color = '#28a745';
     } else {
         gameElements.keypad.classList.add('disabled');
         buttons.guess.disabled = true;
-        gameElements.turnIndicator.style.color = '#dc3545'; // Red for others' turn
+        gameElements.turnIndicator.style.color = '#6c757d';
     }
     
+    // If I am the target, I can't do anything
+    if (targetPlayerId === currentPlayerId) {
+        gameElements.keypad.classList.add('disabled');
+        buttons.guess.disabled = true;
+        gameElements.turnIndicator.textContent = `คุณคือเป้าหมาย! รอเพื่อนทาย...`;
+        gameElements.turnIndicator.style.color = '#dc3545';
+    }
+
     if (roomData.status === 'finished') {
-        gameElements.turnIndicator.textContent = `เกมจบแล้ว! ${roomData.winnerName} เป็นผู้ชนะ!`;
+        gameElements.targetIndicator.textContent = `เกมจบแล้ว!`;
+        gameElements.turnIndicator.textContent = `${roomData.winnerName} เป็นผู้ชนะ!`;
         gameElements.keypad.classList.add('disabled');
         buttons.guess.disabled = true;
     }
@@ -158,7 +179,7 @@ function updateGuessLog(history) {
     history.forEach(log => {
         const logItem = document.createElement('div');
         logItem.className = 'log-item';
-        logItem.textContent = `${log.playerName} ทายเลข ${log.guess} -> ผล: ${log.result}`;
+        logItem.textContent = `${log.attackerName} ทายเลขของ ${log.targetName} -> ${log.guess}`;
         gameElements.guessLog.prepend(logItem);
     });
 }
@@ -172,28 +193,49 @@ function handleGuess() {
 
     roomRef.once('value', (snapshot) => {
         const roomData = snapshot.val();
-        const players = roomData.players;
-        let result = "ไม่มีใครถูกทาย";
-        let winnerFound = false;
+        const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
 
-        for (const playerId in players) {
-            if (playerId !== currentPlayerId && players[playerId].secretNumber === guess) {
-                const targetName = players[playerId].name;
-                result = `ทายถูก! ${targetName} คือเลข ${guess}!`;
-                winnerFound = true;
-                roomRef.update({ status: 'finished', winnerName: playerName });
-                break;
-            }
-        }
-        
-        const newLog = { playerName: playerName, guess: guess, result: result };
+        const targetPlayerId = playerOrder[targetPlayerIndex];
+        const targetPlayer = players[targetPlayerId];
+        const attackers = playerOrder.filter(id => id !== targetPlayerId);
+        const attackerPlayerId = attackers[attackerTurnIndex];
+        const attackerPlayer = players[attackerPlayerId];
+
+        // Log the guess
+        const newLog = { 
+            attackerName: attackerPlayer.name, 
+            targetName: targetPlayer.name,
+            guess: guess 
+        };
         const newHistory = roomData.guessHistory ? [...roomData.guessHistory, newLog] : [newLog];
-        
-        if (!winnerFound) {
-            const nextTurnIndex = (roomData.currentPlayerTurnIndex + 1) % roomData.turnOrder.length;
-            roomRef.update({ guessHistory: newHistory, currentPlayerTurnIndex: nextTurnIndex });
+
+        // Check for win condition
+        if (targetPlayer.secretNumber === guess) {
+            roomRef.update({ 
+                status: 'finished', 
+                winnerName: attackerPlayer.name,
+                guessHistory: newHistory
+            });
+            return;
+        }
+
+        // --- Move to the next turn ---
+        const nextAttackerIndex = attackerTurnIndex + 1;
+
+        if (nextAttackerIndex >= attackers.length) {
+            // Last attacker has guessed, move to the next target
+            const nextTargetIndex = (targetPlayerIndex + 1) % playerOrder.length;
+            roomRef.update({
+                targetPlayerIndex: nextTargetIndex,
+                attackerTurnIndex: 0, // Reset attacker turn
+                guessHistory: newHistory
+            });
         } else {
-            roomRef.child('guessHistory').set(newHistory);
+            // Move to the next attacker
+            roomRef.update({
+                attackerTurnIndex: nextAttackerIndex,
+                guessHistory: newHistory
+            });
         }
     });
 }
@@ -254,7 +296,7 @@ function handleReadyUp() {
 function handleKeypadClick(e) {
     if (e.target.closest('.keypad.disabled')) return;
     if (!e.target.classList.contains('key')) return;
-if (currentInput.length >= 4) return;
+    if (currentInput.length >= 4) return;
     currentInput += e.target.textContent;
     gameElements.gameDisplay.textContent = currentInput;
 }
