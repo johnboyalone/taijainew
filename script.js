@@ -92,10 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     const defeatedOverlay = document.getElementById('defeated-overlay');
-    const winnerAnnouncement = {
-        overlay: document.getElementById('winner-announcement-overlay'),
-        name: document.getElementById('winner-announcement-name')
-    };
 
     // --- Navigation ---
     function navigateTo(pageName) {
@@ -430,6 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSendChat() {
         const message = inputs.chat.value.trim();
         if (!message) return;
+        
         const chatRef = database.ref(`rooms/${currentRoomId}/chat`).push();
         chatRef.set({
             senderId: currentPlayerId,
@@ -445,10 +442,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const messages = Object.values(chatData).sort((a, b) => a.timestamp - b.timestamp);
         const lastMessage = messages[messages.length - 1];
 
-        if (lastMessage && lastMessage.senderId !== currentPlayerId && (Date.now() - lastMessage.timestamp < 3000)) {
+        if (lastMessage && lastMessage.senderId !== currentPlayerId && (Date.now() - lastMessage.timestamp < 4000)) {
             showFloatingChatMessage(lastMessage);
         }
-        if (!isChatOpen && lastMessage) chatElements.unreadIndicator.style.display = 'block';
+        if (!isChatOpen && lastMessage) {
+            chatElements.unreadIndicator.style.display = 'block';
+        }
 
         chatElements.messagesContainer.innerHTML = '';
         messages.forEach(msg => {
@@ -458,7 +457,9 @@ document.addEventListener('DOMContentLoaded', () => {
             item.innerHTML = `<div class="sender">${msg.senderName}</div><div>${msg.text}</div>`;
             chatElements.messagesContainer.appendChild(item);
         });
-        chatElements.body.scrollTop = chatElements.body.scrollHeight;
+        if (isChatOpen) {
+            chatElements.body.scrollTop = chatElements.body.scrollHeight;
+        }
     }
 
     function showFloatingChatMessage(msg) {
@@ -472,23 +473,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- End Game Logic ---
     function endGame(roomData) {
         if (turnTimer) clearInterval(turnTimer);
-
-        winnerAnnouncement.name.textContent = roomData.winnerName;
-        winnerAnnouncement.overlay.style.display = 'flex';
-        setTimeout(() => {
-            winnerAnnouncement.overlay.classList.add('visible');
-        }, 10);
-
-        setTimeout(() => {
-            winnerAnnouncement.overlay.classList.remove('visible');
-            setTimeout(() => {
-                winnerAnnouncement.overlay.style.display = 'none';
-                const titles = assignTitles(roomData);
-                showTitleCards(roomData, titles, () => {
-                    showSummaryPage(roomData, titles);
-                });
-            }, 500);
-        }, 5000);
+        
+        const titles = assignTitles(roomData);
+        
+        showTitleCards(roomData, titles, () => {
+            showSummaryPage(roomData, titles);
+        });
     }
 
     function assignTitles(roomData) {
@@ -496,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let titles = {};
         Object.entries(players).forEach(([id, player]) => {
             const stats = player.stats || { guesses: 0, assassinateFails: 0, timeOuts: 0 };
-            if (player.name === roomData.winnerName) {
+            if (player.name === roomData.winnerName && roomData.winnerName !== "ไม่มีผู้ชนะ") {
                 titles[id] = { emoji: '👑', title: 'ผู้รอดชีวิตหนึ่งเดียว', desc: 'ยืนหนึ่งอย่างสมศักดิ์ศรี!' };
             } else if (stats.assassinateFails > 1) {
                 titles[id] = { emoji: '🤡', title: 'มือสังหารจอมพลาดเป้า', desc: 'เกือบจะเท่แล้ว...ถ้าไม่พลาดเอง' };
@@ -512,16 +502,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showTitleCards(roomData, titles, onComplete) {
-        const playerIds = Object.keys(titles);
+        const winnerId = Object.keys(roomData.players).find(id => roomData.players[id].name === roomData.winnerName);
+        const otherPlayerIds = Object.keys(titles).filter(id => id !== winnerId);
+        const playerIdsInOrder = winnerId ? [winnerId, ...otherPlayerIds] : Object.keys(titles);
+
         let currentIndex = 0;
 
         function showNextCard() {
-            if (currentIndex >= playerIds.length) {
+            if (currentIndex >= playerIdsInOrder.length) {
                 summaryElements.titleCardOverlay.style.display = 'none';
                 if (onComplete) onComplete();
                 return;
             }
-            const playerId = playerIds[currentIndex];
+            const playerId = playerIdsInOrder[currentIndex];
             const playerData = roomData.players[playerId];
             const titleData = titles[playerId];
 
@@ -547,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentIndex++;
                     showNextCard();
                 }, 500);
-            }, 3500);
+            }, 4000);
         }
         showNextCard();
     }
@@ -630,6 +623,10 @@ document.addEventListener('DOMContentLoaded', () => {
         chatElements.overlay.style.display = 'flex';
         chatElements.unreadIndicator.style.display = 'none';
         isChatOpen = true;
+        // Scroll to bottom when chat is opened
+        setTimeout(() => {
+            chatElements.body.scrollTop = chatElements.body.scrollHeight;
+        }, 0);
     });
     chatElements.closeBtn.addEventListener('click', () => {
         chatElements.overlay.style.display = 'none';
