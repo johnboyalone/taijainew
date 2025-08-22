@@ -1,9 +1,9 @@
 /* General Styles */
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box; }
 .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
 .page { width: 100%; }
 h1, h2, h3 { color: #333; }
-input[type="text"], input[type="number"] { width: calc(100% - 20px); padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+input[type="text"], input[type="number"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
 .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; transition: background-color 0.2s; }
 .btn-primary { background-color: #007bff; color: white; }
 .btn-success { background-color: #28a745; color: white; }
@@ -18,6 +18,13 @@ input[type="text"], input[type="number"] { width: calc(100% - 20px); padding: 10
 #room-list-container .room-item:hover { background-color: #dde1e6; }
 
 /* Game Page Specific */
+.game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.game-header h2 { margin: 0; }
+.game-header-buttons { display: flex; gap: 10px; }
+.header-icon-btn { background: #e9ecef; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer; position: relative; }
+#chat-unread-indicator { position: absolute; top: 5px; right: 5px; width: 10px; height: 10px; background-color: red; border-radius: 50%; }
+#my-secret-number-display { background: #007bff; color: white; padding: 8px; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
+#my-secret-number-display span { letter-spacing: 3px; }
 #game-display { background-color: #e9ecef; min-height: 40px; border-radius: 4px; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; }
 .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .keypad .key { padding: 20px; font-size: 20px; background-color: #fff; border: 1px solid #ccc; border-radius: 8px; cursor: pointer; }
@@ -31,6 +38,9 @@ input[type="text"], input[type="number"] { width: calc(100% - 20px); padding: 10
 #player-list { margin-bottom: 20px; }
 .player-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
 .player-item.player-defeated { opacity: 0.5; text-decoration: line-through; }
+.player-info { display: flex; align-items: center; gap: 8px; }
+.recent-guess { background-color: #ffc107; color: #333; padding: 2px 6px; border-radius: 4px; font-size: 12px; animation: fadeOut 3s forwards; }
+@keyframes fadeOut { 0% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
 .hp-bar { display: flex; gap: 4px; }
 .hp-point { width: 15px; height: 15px; background-color: #28a745; border-radius: 50%; }
 .hp-point.lost { background-color: #e9ecef; }
@@ -39,20 +49,28 @@ input[type="text"], input[type="number"] { width: calc(100% - 20px); padding: 10
 #target-indicator { grid-column: 2 / 3; font-weight: bold; }
 #turn-indicator { grid-column: 2 / 3; }
 
-/* Guess Log */
-#guess-log { margin-top: 20px; max-height: 150px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px; text-align: left; }
-.log-item { padding: 4px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+/* Modal (Pop-up) Styles */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-content { background: white; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80vh; display: flex; flex-direction: column; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
+.modal-close-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+.modal-header h3 { margin: 0; }
+
+/* History Modal Specific */
+#history-modal-body { padding: 15px; overflow-y: auto; }
+.history-player-section { margin-bottom: 15px; }
+.history-player-section h4 { margin-top: 0; padding-bottom: 5px; border-bottom: 1px solid #ddd; }
+.history-player-section .log-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
 .hint-bull { color: #28a745; font-weight: bold; }
 .hint-cow { color: #ffc107; font-weight: bold; }
 
-/* Personal History Pop-up */
-#history-popup-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
-#history-summary { background-color: #007bff; color: white; padding: 10px 15px; border-radius: 25px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); cursor: pointer; font-size: 14px; }
-#history-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 999; }
-#history-modal { background: white; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80vh; display: flex; flex-direction: column; }
-#history-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
-#history-close-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
-#history-modal-content { padding: 15px; overflow-y: auto; }
-.history-player-section { margin-bottom: 15px; }
-.history-player-section h4 { margin-top: 0; padding-bottom: 5px; border-bottom: 1px solid #ddd; }
-.history-player-section .log-item { display: flex; justify-content: space-between; }
+/* Chat Modal Specific */
+#chat-modal-body { padding: 15px; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column-reverse; }
+#chat-messages { display: flex; flex-direction: column; gap: 8px; }
+.chat-message { max-width: 80%; padding: 8px 12px; border-radius: 18px; }
+.chat-message.mine { background-color: #007bff; color: white; align-self: flex-end; }
+.chat-message.theirs { background-color: #e9ecef; color: #333; align-self: flex-start; }
+.chat-message .sender { font-weight: bold; font-size: 12px; margin-bottom: 4px; }
+#chat-modal-footer { display: flex; padding: 10px; border-top: 1px solid #eee; }
+#chat-input { flex-grow: 1; border-right: none; border-top-right-radius: 0; border-bottom-right-radius: 0; margin: 0; }
+#chat-send-btn { border-top-left-radius: 0; border-bottom-left-radius: 0; background-color: #007bff; color: white; border: 1px solid #007bff; }
