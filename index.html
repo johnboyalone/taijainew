@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เกมทายเลขมหาประลัย</title>
     <link rel="stylesheet" href="style.css">
-    <!-- โค้ดที่จำเป็นและถูกนำกลับมาแล้ว -->
+    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
@@ -100,7 +100,7 @@
         <!-- ส่วนตั้งค่าเลขลับ -->
         <div id="setup-section" class="game-section">
             <h3>ถึงเวลาตั้งเลขลับของคุณ!</h3>
-            <p>ระบบจะสุ่มเลขให้โดยอัตโนมัติ</p>
+            <p>กรุณากด "พร้อมแล้ว!" เพื่อให้ระบบสุ่มเลขให้</p>
             <button id="btn-ready-up" class="btn btn-primary">พร้อมแล้ว!</button>
         </div>
 
@@ -168,13 +168,12 @@
         </div>
     </div>
 
-    <!-- หน้าสรุปผลเกม -->
-    <div id="page-summary" class="page" style="display: none;">
-        <div class="card">
-            <h1>สรุปผลการแข่งขัน</h1>
-            <div id="summary-winner"></div>
-            <div id="summary-player-list"></div>
-            <button id="btn-back-to-home" class="btn btn-primary">กลับไปหน้าแรก</button>
+    <!-- หน้าจอเชิดชูผู้ชนะ (เพิ่มใหม่) -->
+    <div id="winner-announcement-overlay" style="display: none;">
+        <div class="winner-content">
+            <h1>ผู้ชนะคือ</h1>
+            <div id="winner-announcement-emoji">👑</div>
+            <h2 id="winner-announcement-name"></h2>
         </div>
     </div>
 
@@ -185,6 +184,16 @@
             <h2 id="title-card-name"></h2>
             <h3 id="title-card-title"></h3>
             <p id="title-card-desc"></p>
+        </div>
+    </div>
+
+    <!-- หน้าสรุปผลเกม -->
+    <div id="page-summary" class="page" style="display: none;">
+        <div class="card">
+            <h1>สรุปผลการแข่งขัน</h1>
+            <div id="summary-winner"></div>
+            <div id="summary-player-list"></div>
+            <button id="btn-back-to-home" class="btn btn-primary">กลับไปหน้าแรก</button>
         </div>
     </div>
 
