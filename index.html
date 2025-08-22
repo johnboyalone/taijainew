@@ -11,8 +11,8 @@
 </head>
 <body>
 
-    <!-- หน้าหลัก: กรอกชื่อ -->
-    <div id="page-home" class="page">
+    <!-- หน้าหลัก: กรอกชื่อ (เพิ่ม class="active" เพื่อให้แสดงผลเป็นหน้าแรก) -->
+    <div id="page-home" class="page active">
         <button id="btn-open-settings-home" class="btn-icon settings-button">⚙️</button>
         <div class="home-container">
             <h1>เกมทายเลข<br>มหาประลัย</h1>
@@ -87,7 +87,6 @@
 
     <!-- หน้าเกม -->
     <div id="page-game" class="page">
-        <!-- *** NEW WRAPPER *** -->
         <div class="game-content-wrapper">
             <!-- ส่วนตั้งค่าเลขลับ -->
             <div id="setup-section" class="game-section">
@@ -130,15 +129,95 @@
                     <button class="key">0</button>
                     <button id="btn-guess" class="key">ทาย</button>
                 </div>
-                <button id="btn-assassinate" class="btn-danger">ตุยซะเถอะ!</button>
+                <button id="btn-assassinate" class="btn btn-danger">ตุยซะเถอะ!</button>
             </div>
 
             <button id="btn-leave-room" class="btn btn-secondary">ออกจากห้อง</button>
         </div>
     </div>
 
-    <!-- (Modals and other pop-ups remain the same) -->
-    <!-- ... a lot of modals here ... -->
+    <!-- Pop-up ตั้งค่า -->
+    <div id="settings-modal-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>ตั้งค่าเสียง</h3>
+                <button id="settings-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="settings-body">
+                <div class="settings-row">
+                    <label for="toggle-bgm">เพลงพื้นหลัง</label>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-bgm" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="settings-row">
+                    <label for="toggle-sfx">เอฟเฟกต์เสียง</label>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-sfx" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pop-up ประวัติ -->
+    <div id="history-modal-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>ประวัติการทายของคุณ</h3>
+                <button id="history-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div id="history-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Pop-up แชท -->
+    <div id="chat-modal-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>แชทในห้อง</h3>
+                <button id="chat-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div id="chat-modal-body">
+                <div id="chat-messages"></div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="พิมพ์ข้อความ...">
+                <button id="chat-send-btn">ส่ง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- หน้าจอสำหรับผู้เล่นที่แพ้ -->
+    <div id="defeated-overlay" class="modal-overlay">
+        <div class="defeated-content">
+            <h1>คุณถูกกำจัดแล้ว</h1>
+            <p>แต่ยังสามารถดูเพื่อนเล่นและแชทได้</p>
+        </div>
+    </div>
+
+    <!-- การ์ดฉายา (และใช้แสดงผู้ชนะด้วย) -->
+    <div id="title-card-overlay" class="modal-overlay">
+        <div id="title-card">
+            <div id="title-card-emoji"></div>
+            <h2 id="title-card-name"></h2>
+            <h3 id="title-card-title"></h3>
+            <p id="title-card-desc"></p>
+        </div>
+    </div>
+
+    <!-- หน้าสรุปผลเกม -->
+    <div id="page-summary" class="page">
+        <div class="card">
+            <h1>สรุปผลการแข่งขัน</h1>
+            <div id="summary-winner"></div>
+            <div id="summary-player-list"></div>
+            <button id="btn-play-again" class="btn btn-success">เล่นอีกครั้ง</button>
+            <button id="btn-back-to-home" class="btn btn-secondary">กลับไปหน้าแรก</button>
+        </div>
+    </div>
 
     <!-- โค้ด JavaScript ของเกม -->
     <script src="script.js"></script>
