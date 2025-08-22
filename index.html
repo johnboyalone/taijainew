@@ -2,9 +2,12 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>เกมทายเลขมหาประลัย</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -14,10 +17,14 @@
     <!-- หน้าหลัก: กรอกชื่อ -->
     <div id="page-home" class="page">
         <div class="card">
-            <button id="btn-open-settings-home" class="btn-icon btn-settings">⚙️</button>
+            <div class="settings-icon-container">
+                <button id="settings-toggle-btn" class="btn-icon">⚙️</button>
+            </div>
             <h1>เกมทายเลข<br>มหาประลัย</h1>
             <p>ใส่ชื่อของคุณเพื่อเริ่มเล่น</p>
-            <input type="text" id="input-player-name" placeholder="ชื่อผู้เล่น..." maxlength="12">
+            <div class="input-group">
+                <input type="text" id="input-player-name" placeholder="ชื่อผู้เล่น..." maxlength="12">
+            </div>
             <button id="btn-go-to-pre-lobby" class="btn btn-primary">ไปต่อ</button>
         </div>
     </div>
@@ -27,7 +34,7 @@
         <div class="card">
             <h1>สวัสดี, <span id="pre-lobby-player-name"></span>!</h1>
             <p>คุณต้องการทำอะไร?</p>
-            <div class="pre-lobby-buttons">
+            <div class="button-group">
                 <button id="btn-go-to-create" class="btn btn-primary">สร้างห้องใหม่</button>
                 <button id="btn-go-to-join" class="btn btn-secondary">เข้าร่วมห้อง</button>
             </div>
@@ -40,7 +47,7 @@
             <h2>ตั้งค่าห้อง</h2>
             <div class="form-group">
                 <label for="input-room-name">ชื่อห้อง (เว้นว่างเพื่อสุ่ม)</label>
-                <input type="text" id="input-room-name" placeholder="เช่น ห้องคนน่ารัก">
+                <input type="text" id="input-room-name" placeholder="เช่น ห้องคนหล่อ">
             </div>
             <div class="form-group">
                 <label for="input-max-players">จำนวนผู้เล่นสูงสุด</label>
@@ -83,58 +90,52 @@
         </div>
     </div>
 
-    <!-- หน้าเกม (แก้ไขโครงสร้างใหม่ทั้งหมด) -->
+    <!-- ================================================== -->
+    <!-- หน้าเกม (โครงสร้างใหม่ที่เรียบง่าย) -->
+    <!-- ================================================== -->
     <div id="page-game" class="page" style="display: none;">
-        
-        <!-- ส่วนตั้งค่าเลขลับ -->
-        <div id="setup-section" class="game-container">
-            <div class="game-card">
-                <h3>ถึงเวลาตั้งเลขลับของคุณ!</h3>
-                <p>กรุณากด "พร้อมแล้ว!" เพื่อให้ระบบสุ่มเลขให้</p>
-                <div id="player-list-waiting" class="player-list-setup"></div>
-                <button id="btn-ready-up" class="btn btn-primary">พร้อมแล้ว!</button>
-                <button id="btn-leave-room-setup" class="btn btn-secondary">ออกจากห้อง</button>
+
+        <!-- ส่วน Header ที่ใช้ร่วมกัน -->
+        <div id="game-header-container">
+            <div id="game-turn-indicator">กำลังรอผู้เล่น...</div>
+            <div class="game-header-buttons">
+                <button id="history-toggle-btn" class="btn-icon">
+                    📜<span id="history-unread-indicator"></span>
+                </button>
+                <button id="chat-toggle-btn" class="btn-icon">
+                    💬<span id="chat-unread-indicator" style="display: none;"></span>
+                </button>
             </div>
         </div>
 
-        <!-- ส่วนรอผู้เล่นอื่น -->
-        <div id="waiting-section" class="game-container" style="display: none;">
-             <div class="game-card">
-                <h3>กำลังรอผู้เล่นคนอื่น...</h3>
-                <div class="spinner"></div>
-                <div id="player-list-waiting-2" class="player-list-setup"></div>
-            </div>
+        <!-- ที่แสดงรายชื่อผู้เล่น (ใช้ที่นี่ที่เดียวเท่านั้น!) -->
+        <div id="player-list-container">
+            <!-- รายชื่อผู้เล่นจะถูกใส่เข้ามาตรงนี้ -->
         </div>
 
-        <!-- ส่วนการเล่นเกม -->
-        <div id="gameplay-section" class="game-container" style="display: none;">
-            <div class="game-header-main">
-                <h2 id="game-turn-indicator">ถึงตาคุณแล้ว!</h2>
-                <div class="game-header-buttons">
-                    <button id="history-toggle-btn" class="btn-icon">📜</button>
-                    <button id="chat-toggle-btn" class="btn-icon">
-                        💬<span id="chat-unread-indicator" style="display: none;"></span>
-                    </button>
+        <!-- ส่วนตั้งค่าเลขลับ (จะถูกซ่อน/แสดง) -->
+        <div id="setup-section">
+            <h3>ถึงเวลาตั้งเลขลับของคุณ!</h3>
+            <p>กรุณากด "พร้อมแล้ว!" เพื่อให้ระบบสุ่มเลขให้</p>
+            <button id="btn-ready-up" class="btn btn-primary">พร้อมแล้ว!</button>
+        </div>
+
+        <!-- ส่วนการเล่นเกม (จะถูกซ่อน/แสดง) -->
+        <div id="gameplay-section" style="display: none;">
+            <div id="game-container">
+                <div id="attack-animation-container"></div>
+                <div class="game-info-card" id="my-secret-number-card">
+                    <label>เลขลับของคุณ</label>
+                    <span id="my-secret-number-text">????</span>
+                </div>
+                <div class="game-info-card" id="timer-card">
+                    <div id="timer-bar"></div>
+                </div>
+                <div class="game-info-card" id="guess-display-card">
+                    <span id="game-display"></span>
                 </div>
             </div>
-            <p id="game-target-indicator">เป้าหมาย: ...</p>
-
-            <div id="player-list-container">
-                <div id="attack-animation-container"></div>
-                <div id="player-list"></div>
-            </div>
-
-            <div class="game-card" id="my-secret-number-display">
-                <p>เลขลับของคุณ</p>
-                <span id="my-secret-number-text">????</span>
-            </div>
-
-            <div class="game-card" id="guess-area">
-                <div id="timer-bar-container"><div id="timer-bar"></div></div>
-                <div id="game-display">----</div>
-            </div>
-
-            <div class="keypad" id="game-keypad">
+            <div class="keypad">
                 <button class="key">1</button> <button class="key">2</button> <button class="key">3</button>
                 <button class="key">4</button> <button class="key">5</button> <button class="key">6</button>
                 <button class="key">7</button> <button class="key">8</button> <button class="key">9</button>
@@ -142,38 +143,86 @@
                 <button class="key">0</button>
                 <button id="btn-guess" class="key key-action">ทาย</button>
             </div>
-            <!-- นำปุ่มตุยเย่กลับมา และเพิ่มปุ่มออกจากห้องที่นี่ -->
             <button id="btn-assassinate" class="btn btn-danger">ตุยเย่!</button>
-            <button id="btn-leave-room" class="btn btn-secondary">ออกจากห้อง</button>
         </div>
+
+        <!-- ปุ่มออกจากห้อง -->
+        <button id="btn-leave-room" class="btn btn-secondary">ออกจากห้อง</button>
     </div>
 
-    <!-- Pop-up ทั้งหมด (ไม่มีการเปลี่ยนแปลง) -->
+
+    <!-- Pop-up ตั้งค่า -->
     <div id="settings-modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-content">
-            <div class="modal-header"><h3>ตั้งค่า</h3><button id="settings-close-btn" class="close-btn">&times;</button></div>
-            <div class="settings-body">
-                <div class="setting-item"><label for="toggle-bgm">เพลงพื้นหลัง</label><label class="switch"><input type="checkbox" id="toggle-bgm"><span class="slider round"></span></label></div>
-                <div class="setting-item"><label for="toggle-sfx">เอฟเฟกต์เสียง</label><label class="switch"><input type="checkbox" id="toggle-sfx"><span class="slider round"></span></label></div>
+            <div class="modal-header">
+                <h3>ตั้งค่าเสียง</h3>
+                <button id="settings-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="settings-modal-body">
+                <div class="setting-item">
+                    <label for="toggle-bgm">เพลงพื้นหลัง</label>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-bgm">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label for="toggle-sfx">เอฟเฟกต์เสียง</label>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-sfx">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Pop-up ประวัติ -->
     <div id="history-modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-content">
-            <div class="modal-header"><h3>ประวัติการทายของคุณ</h3><button id="history-close-btn" class="close-btn">&times;</button></div>
+            <div class="modal-header">
+                <h3>ประวัติการทาย</h3>
+                <button id="history-close-btn" class="close-btn">&times;</button>
+            </div>
             <div id="history-modal-body"></div>
         </div>
     </div>
+
+    <!-- Pop-up แชท -->
     <div id="chat-modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-content">
-            <div class="modal-header"><h3>แชทในห้อง</h3><button id="chat-close-btn" class="close-btn">&times;</button></div>
-            <div id="chat-modal-body"><div id="chat-messages"></div></div>
-            <div class="chat-input-area"><input type="text" id="chat-input" placeholder="พิมพ์ข้อความ..."><button id="chat-send-btn">ส่ง</button></div>
+            <div class="modal-header">
+                <h3>แชทในห้อง</h3>
+                <button id="chat-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div id="chat-modal-body">
+                <div id="chat-messages"></div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="พิมพ์ข้อความ...">
+                <button id="chat-send-btn">ส่ง</button>
+            </div>
         </div>
     </div>
-    <div id="defeated-overlay" style="display: none;"><div class="defeated-content"><h1>คุณถูกกำจัดแล้ว</h1><p>แต่ยังสามารถดูเพื่อนเล่นและแชทได้</p></div></div>
-    <div id="title-card-overlay" style="display: none;"><div id="title-card"><div id="title-card-emoji"></div><h2 id="title-card-name"></h2><h3 id="title-card-title"></h3><p id="title-card-desc"></p></div></div>
-    
+
+    <!-- หน้าจอสำหรับผู้เล่นที่แพ้ -->
+    <div id="defeated-overlay" style="display: none;">
+        <div class="defeated-content">
+            <h1>คุณถูกกำจัดแล้ว</h1>
+            <p>แต่ยังสามารถดูเพื่อนเล่นและแชทได้</p>
+        </div>
+    </div>
+
+    <!-- การ์ดฉายา -->
+    <div id="title-card-overlay" style="display: none;">
+        <div id="title-card">
+            <div id="title-card-emoji"></div>
+            <h2 id="title-card-name"></h2>
+            <h3 id="title-card-title"></h3>
+            <p id="title-card-desc"></p>
+        </div>
+    </div>
+
     <!-- หน้าสรุปผลเกม -->
     <div id="page-summary" class="page" style="display: none;">
         <div class="card">
@@ -185,6 +234,7 @@
         </div>
     </div>
 
+    <!-- โค้ด JavaScript ของเกม -->
     <script src="script.js"></script>
 
 </body>
