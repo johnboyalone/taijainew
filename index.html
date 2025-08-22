@@ -3,99 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เกมทายเลข Pro</title>
+    <title>เกมทายเลข Firebase</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
-    <!-- Page 1: Home -->
+    <!-- Page: Home -->
     <div id="page-home" class="page">
         <div class="container">
-            <h1>เกมทายเลข Pro</h1>
-            <p>ทายเลขลับ, จับเวลา, มีชีวิต, พร้อมคำใบ้!</p>
-            <input type="text" id="input-player-name" placeholder="กรอกชื่อของคุณ...">
+            <h1>เกมทายเลข</h1>
+            <p>สร้างห้อง หรือเข้าร่วมห้องกับเพื่อน</p>
+            <input type="text" id="input-player-name" placeholder="กรอกชื่อของคุณ">
             <button id="btn-go-to-lobby" class="btn btn-primary">เข้าสู่ล็อบบี้</button>
         </div>
     </div>
 
-    <!-- Page 2: Lobby -->
+    <!-- Page: Lobby -->
     <div id="page-lobby" class="page" style="display: none;">
         <div class="container">
-            <h2>ล็อบบี้</h2>
-            <p>สวัสดี, <span id="lobby-player-name"></span>!</p>
-            <div id="room-config-form">
-                <h3>สร้างห้องใหม่ (ตั้งค่าได้)</h3>
-                <div class="form-group">
-                    <label for="input-room-name">ชื่อห้อง</label>
-                    <input type="text" id="input-room-name" placeholder="เช่น ห้องของฉัน">
+            <h2>ล็อบบี้ - ยินดีต้อนรับ, <span id="lobby-player-name"></span></h2>
+            <div class="card">
+                <h3>สร้างห้องใหม่</h3>
+                <input type="text" id="input-room-name" placeholder="ชื่อห้อง (เว้นว่างเพื่อใช้ชื่ออัตโนมัติ)">
+                <div class="config-grid">
+                    <label>ผู้เล่นสูงสุด: <input type="number" id="input-max-players" value="4" min="2" max="6"></label>
+                    <label>จำนวนเลข: <input type="number" id="input-digit-count" value="4" min="3" max="6"></label>
+                    <label>เวลา/ตา (วิ): <input type="number" id="input-turn-time" value="30" min="10" max="90"></label>
                 </div>
-                <div class="form-group">
-                    <label for="input-max-players">จำนวนผู้เล่นสูงสุด (2-6)</label>
-                    <input type="number" id="input-max-players" value="4" min="2" max="6">
-                </div>
-                <div class="form-group">
-                    <label for="input-digit-count">ทายเลขกี่หลัก (3-6)</label>
-                    <input type="number" id="input-digit-count" value="4" min="3" max="6">
-                </div>
-                <div class="form-group">
-                    <label for="input-turn-time">เวลาต่อรอบ (วินาที)</label>
-                    <input type="number" id="input-turn-time" value="20" min="10" max="60">
-                </div>
-                <button id="btn-create-room" class="btn btn-primary">สร้างห้องตามนี้</button>
+                <button id="btn-create-room" class="btn btn-success">สร้างห้อง</button>
             </div>
-            <hr>
-            <h3>รายชื่อห้อง</h3>
-            <div id="room-list-container"><p>กำลังโหลด...</p></div>
+            <div class="card">
+                <h3>เข้าร่วมห้อง</h3>
+                <div id="room-list-container">
+                    <p>กำลังโหลดห้อง...</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Page 3: Game Room -->
+    <!-- Page: Game -->
     <div id="page-game" class="page" style="display: none;">
         <div class="container">
             <h2 id="game-room-name">ห้อง: ...</h2>
-            <div id="player-list-container">
-                <h3>ผู้เล่นในห้อง</h3>
-                <div id="player-list"></div>
-            </div>
-            <hr>
-
+            
+            <!-- Setup Section -->
             <div id="setup-section">
-                <p>เมื่อทุกคนครบแล้ว กดปุ่มเพื่อสุ่มเลขลับและเตรียมพร้อม</p>
-                <button id="btn-ready-up" class="btn btn-primary">ฉันพร้อมแล้ว!</button>
+                <p>กด "พร้อม" เพื่อสุ่มเลขลับและเริ่มรอผู้เล่นคนอื่น</p>
+                <button id="btn-ready-up" class="btn btn-primary">พร้อม!</button>
             </div>
 
+            <!-- Waiting Section -->
             <div id="waiting-section" style="display: none;">
                 <h3>ยอดเยี่ยม!</h3>
-                <p>กำลังรอผู้เล่นคนอื่น...</p>
-                <div class="spinner"></div>
+                <p>กำลังรอผู้เล่นคนอื่นตั้งค่า...</p>
+                <div class="loader"></div>
             </div>
 
+            <!-- Gameplay Section -->
             <div id="gameplay-section" style="display: none;">
-                <div id="timer-indicator">20</div>
-                <h4 id="target-indicator">เป้าหมาย: ...</h4>
-                <h3 id="turn-indicator">ผู้ทาย: ...</h3>
-                
+                <div id="player-list"></div>
+                <div class="game-status">
+                    <div id="timer-indicator">30</div>
+                    <div id="target-indicator">เป้าหมาย: ...</div>
+                    <div id="turn-indicator">ผู้ทาย: ...</div>
+                </div>
                 <div id="game-display"></div>
                 <div class="keypad">
                     <button class="key">1</button> <button class="key">2</button> <button class="key">3</button>
                     <button class="key">4</button> <button class="key">5</button> <button class="key">6</button>
                     <button class="key">7</button> <button class="key">8</button> <button class="key">9</button>
-                    <button id="btn-delete" class="key key-special">ลบ</button>
-                    <button class="key">0</button>
-                    <button id="btn-guess" class="key key-special">ทาย</button>
+                    <button class="key" id="btn-delete">ลบ</button> <button class="key">0</button> <button class="key btn-guess" id="btn-guess">ทาย</button>
                 </div>
-                <hr>
-                <h4>ประวัติการทาย</h4>
                 <div id="guess-log"></div>
             </div>
-            
-            <hr>
+
             <button id="btn-leave-room" class="btn btn-danger">ออกจากห้อง</button>
+        </div>
+        
+        <!-- Personal History Pop-up -->
+        <div id="history-popup-container">
+            <div id="history-summary">
+                <span>ประวัติส่วนตัว</span>
+            </div>
+            <div id="history-modal-overlay" style="display: none;">
+                <div id="history-modal">
+                    <div id="history-modal-header">
+                        <h3>ประวัติการทายของคุณ</h3>
+                        <button id="history-close-btn">&times;</button>
+                    </div>
+                    <div id="history-modal-content">
+                        <!-- History will be generated here -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
