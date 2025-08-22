@@ -108,11 +108,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Navigation ---
     function navigateTo(pageName) {
-        Object.values(pages).forEach(p => p.style.display = 'none');
+        // วนลูปเพื่อเอา class "active" ออกจากทุกหน้า
+        Object.values(pages).forEach(p => {
+            p.classList.remove('active');
+        });
+
+        // เพิ่ม class "active" ให้กับหน้าที่ต้องการแสดงผล
         if (pages[pageName]) {
-            pages[pageName].style.display = 'flex';
+            pages[pageName].classList.add('active');
         }
     }
+
 
     // --- Lobby Logic ---
     function handleGoToPreLobby() {
