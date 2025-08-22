@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เกมทายเลข (รุมทาย)</title>
+    <title>เกมทายเลข Pro</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
-    <!-- Page 1: Home / Welcome -->
+    <!-- Page 1: Home -->
     <div id="page-home" class="page">
         <div class="container">
-            <h1>เกมทายเลข (รุมทาย)</h1>
-            <p>ทายเลข 4 หลักของเป้าหมายให้ถูก!</p>
+            <h1>เกมทายเลข Pro</h1>
+            <p>ทายเลขลับ, จับเวลา, มีชีวิต, พร้อมคำใบ้!</p>
             <input type="text" id="input-player-name" placeholder="กรอกชื่อของคุณ...">
             <button id="btn-go-to-lobby" class="btn btn-primary">เข้าสู่ล็อบบี้</button>
         </div>
@@ -25,12 +25,29 @@
         <div class="container">
             <h2>ล็อบบี้</h2>
             <p>สวัสดี, <span id="lobby-player-name"></span>!</p>
-            <button id="btn-create-room" class="btn btn-secondary">สร้างห้องใหม่</button>
+            <div id="room-config-form">
+                <h3>สร้างห้องใหม่ (ตั้งค่าได้)</h3>
+                <div class="form-group">
+                    <label for="input-room-name">ชื่อห้อง</label>
+                    <input type="text" id="input-room-name" placeholder="เช่น ห้องของฉัน">
+                </div>
+                <div class="form-group">
+                    <label for="input-max-players">จำนวนผู้เล่นสูงสุด (2-6)</label>
+                    <input type="number" id="input-max-players" value="4" min="2" max="6">
+                </div>
+                <div class="form-group">
+                    <label for="input-digit-count">ทายเลขกี่หลัก (3-6)</label>
+                    <input type="number" id="input-digit-count" value="4" min="3" max="6">
+                </div>
+                <div class="form-group">
+                    <label for="input-turn-time">เวลาต่อรอบ (วินาที)</label>
+                    <input type="number" id="input-turn-time" value="20" min="10" max="60">
+                </div>
+                <button id="btn-create-room" class="btn btn-primary">สร้างห้องตามนี้</button>
+            </div>
             <hr>
             <h3>รายชื่อห้อง</h3>
-            <div id="room-list-container">
-                <p>กำลังโหลดรายชื่อห้อง...</p>
-            </div>
+            <div id="room-list-container"><p>กำลังโหลด...</p></div>
         </div>
     </div>
 
@@ -44,23 +61,20 @@
             </div>
             <hr>
 
-            <!-- Setup Section -->
             <div id="setup-section">
-                <p>เมื่อทุกคนเข้ามาครบแล้ว กดปุ่มเพื่อสุ่มเลขลับ 4 หลักและเตรียมพร้อม</p>
+                <p>เมื่อทุกคนครบแล้ว กดปุ่มเพื่อสุ่มเลขลับและเตรียมพร้อม</p>
                 <button id="btn-ready-up" class="btn btn-primary">ฉันพร้อมแล้ว!</button>
             </div>
 
-            <!-- Waiting Section -->
             <div id="waiting-section" style="display: none;">
                 <h3>ยอดเยี่ยม!</h3>
-                <p>กำลังรอผู้เล่นคนอื่นตั้งค่า...</p>
+                <p>กำลังรอผู้เล่นคนอื่น...</p>
                 <div class="spinner"></div>
             </div>
 
-            <!-- Gameplay Section -->
             <div id="gameplay-section" style="display: none;">
-                <!-- *** NEW: Indicators for the new game mode *** -->
-                <h4 id="target-indicator">เป้าหมายรอบนี้: ...</h4>
+                <div id="timer-indicator">20</div>
+                <h4 id="target-indicator">เป้าหมาย: ...</h4>
                 <h3 id="turn-indicator">ผู้ทาย: ...</h3>
                 
                 <div id="game-display"></div>
