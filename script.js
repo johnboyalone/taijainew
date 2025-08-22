@@ -15,9 +15,10 @@ const database = firebase.database();
 let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
 let isChatOpen = false;
-let hasInteracted = false; // สำหรับเช็คการเล่นเสียงครั้งแรก
+let hasInteracted = false;
 let isBgMusicEnabled = true;
 let isSfxEnabled = true;
+let lastAttackerId = null; // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< เพิ่มตัวแปรนี้
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,13 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
         wrong: new Audio('sounds/wrong-answer.mp3'),
         yourTurn: new Audio('sounds/your-turn.mp3')
     };
-    // ตั้งค่าเสียงพื้นหลัง
     sounds.background.loop = true;
     sounds.background.volume = 0.3;
 
-    // ฟังก์ชันกลางสำหรับเล่นเสียง
     function playSound(sound) {
-        if (!hasInteracted || !isSfxEnabled) return; // เช็คว่าเปิด SFX อยู่ไหม
+        if (!hasInteracted || !isSfxEnabled) return;
         sound.currentTime = 0;
         sound.play().catch(e => console.log("ไม่สามารถเล่นเสียงได้:", e));
     }
@@ -128,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         if (!hasInteracted) {
             hasInteracted = true;
-            if (isBgMusicEnabled) { // เช็คก่อนเล่น
+            if (isBgMusicEnabled) {
                 sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
             }
         }
@@ -231,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameElements.setupSection.style.display = myPlayer?.isReady ? 'none' : 'block';
                 gameElements.waitingSection.style.display = myPlayer?.isReady ? 'block' : 'none';
                 gameElements.gameplaySection.style.display = 'none';
-                checkIfGameCanStart(roomData);
+                lastAttackerId = null; // รีเซ็ตเมื่อกลับไปรอ
             } else if (roomData.status === 'playing') {
                 const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
                 if (activePlayers.length <= 1) {
@@ -297,9 +296,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
         
+        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+        // ตรวจจับการเปลี่ยนตา และเล่นเสียงเฉพาะคนที่เพิ่งถึงตา
+        if (attackerPlayerId !== lastAttackerId) {
+            if (isMyTurn) {
+                playSound(sounds.yourTurn);
+            }
+            lastAttackerId = attackerPlayerId; // อัปเดตตาปัจจุบัน
+        }
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
-            playSound(sounds.yourTurn); // เล่นเสียงในเงื่อนไขนี้เท่านั้น
         }
         
         if (targetPlayerId === currentPlayerId) { 
@@ -618,6 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (turnTimer) clearInterval(turnTimer);
 
         playerRef = null; roomRef = null; roomListener = null; currentRoomId = null; currentInput = '';
+        lastAttackerId = null; // รีเซ็ตเมื่อออกจากห้อง
 
         navigateTo('preLobby');
     }
