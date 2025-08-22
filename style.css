@@ -1,4 +1,4 @@
-/* --- General & Layout (Super Pastel Theme) --- */
+/* --- General & Layout (Super Pastel Theme - Refined) --- */
 @import url('https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap');
 
 :root {
@@ -42,9 +42,20 @@ body {
     max-width: 450px;
     padding: 20px;
     box-sizing: border-box;
+    display: none; /* Default to hidden */
+}
+
+/* Flex display for centered pages */
+#page-home, #page-pre-lobby, #page-lobby-create, #page-lobby-join, #page-summary {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
 }
 
 .card {
+    width: 100%;
     background: var(--content-bg);
     backdrop-filter: blur(10px);
     padding: 30px;
@@ -61,14 +72,8 @@ h1, h2, h3 {
 
 /* --- Home Page Layout --- */
 #page-home {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
     max-width: 100%;
 }
-
 .home-container {
     width: 100%;
     max-width: 450px;
@@ -80,50 +85,49 @@ h1, h2, h3 {
     box-shadow: var(--shadow);
     border: 1px solid rgba(255, 255, 255, 0.5);
 }
-
-#page-home h1 {
-    font-size: 2.5rem;
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-
-#page-home p {
-    font-size: 1.1rem;
-    color: var(--text-dark);
-    opacity: 0.8;
-    margin-bottom: 30px;
-}
+#page-home h1 { font-size: 2.5rem; font-weight: 600; margin-bottom: 15px; }
+#page-home p { font-size: 1.1rem; color: var(--text-dark); opacity: 0.8; margin-bottom: 30px; }
 
 .input-group {
-    display: flex;
-    width: 100%;
+    display: flex; width: 100%;
     border-radius: var(--border-radius-small);
-    overflow: hidden;
-    border: 1px solid var(--border-color);
+    overflow: hidden; border: 1px solid var(--border-color);
 }
-
 .input-group input[type="text"] {
-    flex-grow: 1;
-    margin: 0;
-    border: none;
-    padding: 18px 20px;
-    font-size: 1.1rem;
-    background-color: #fff;
-    color: var(--text-dark);
+    flex-grow: 1; margin: 0; border: none;
+    padding: 18px 20px; font-size: 1.1rem;
+    background-color: #fff; color: var(--text-dark);
 }
 .input-group input[type="text"]:focus { outline: none; }
-
 .input-group button {
-    margin: 0;
-    border: none;
-    padding: 18px 25px;
-    font-size: 1.1rem;
-    background-color: var(--primary-color);
-    color: var(--text-bright);
-    cursor: pointer;
-    transition: background-color 0.2s;
+    margin: 0; border: none; padding: 18px 25px; font-size: 1.1rem;
+    background-color: var(--primary-color); color: var(--text-bright);
+    cursor: pointer; transition: background-color 0.2s;
 }
 .input-group button:hover { filter: brightness(1.05); }
+
+/* --- Lobby Create/Join Page (Refined) --- */
+.form-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    width: 100%;
+}
+.form-group label {
+    font-size: 1.1rem;
+    text-align: left;
+    flex-basis: 50%;
+}
+.form-group input, .form-group select {
+    flex-basis: 50%;
+    margin: 0;
+    padding: 10px;
+    border-radius: var(--border-radius-small);
+    border: 1px solid var(--border-color);
+    background-color: #fff;
+}
+#page-lobby-create .btn { margin-top: 20px; }
 
 /* --- Game Status Display --- */
 .turn-info { margin-bottom: 20px; }
@@ -132,47 +136,29 @@ h1, h2, h3 {
 
 /* --- Player Grid Layout --- */
 #player-list {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 25px;
-    position: relative;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-bottom: 25px; position: relative;
 }
-
 .player-item {
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 80px;
-    border-radius: var(--border-radius-small);
-    background-color: var(--content-bg);
-    position: relative;
-    z-index: 2;
-    transition: all 0.3s ease;
+    padding: 12px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; min-height: 80px;
+    border-radius: var(--border-radius-small); background-color: var(--content-bg);
+    position: relative; z-index: 2; transition: all 0.3s ease;
     border: 1px solid rgba(255, 255, 255, 0.6);
     box-shadow: 0 4px 10px rgba(180, 180, 210, 0.1);
 }
-
 .player-item.attacker {
-    border-color: var(--special-danger);
-    box-shadow: 0 0 15px var(--special-danger);
+    border-color: var(--special-danger); box-shadow: 0 0 15px var(--special-danger);
     transform: scale(1.05);
 }
-
 .player-item.target {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 15px var(--primary-color);
+    border-color: var(--primary-color); box-shadow: 0 0 15px var(--primary-color);
     transform: scale(1.05);
 }
-
 .player-defeated {
-    opacity: 0.6;
-    background-color: rgba(200, 200, 200, 0.2);
+    opacity: 0.6; background-color: rgba(200, 200, 200, 0.2);
     border-style: dashed;
 }
-
 .player-info { font-size: 1rem; font-weight: 500; }
 .player-item .hp-bar { display: flex; gap: 4px; margin-top: 5px; }
 .player-item .hp-point { width: 12px; height: 12px; background-color: var(--special-danger); border-radius: 50%; }
@@ -196,24 +182,17 @@ h1, h2, h3 {
 
 /* --- Secret Number & Guessing Area --- */
 .secret-number-area, .guess-input-area {
-    background-color: var(--content-bg);
-    border-radius: var(--border-radius-main);
-    padding: 20px;
-    margin-bottom: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.6);
+    background-color: var(--content-bg); border-radius: var(--border-radius-main);
+    padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255, 255, 255, 0.6);
     box-shadow: var(--shadow);
 }
 #my-secret-number-display {
-    font-size: 1rem;
-    color: var(--text-dark);
-    opacity: 0.8;
-    margin-bottom: 10px;
+    font-size: 1rem; color: var(--text-dark); opacity: 0.8; margin-bottom: 10px;
 }
 #my-secret-number-display span {
     display: block; font-size: 2.5rem; font-weight: 500;
     letter-spacing: 8px; color: var(--text-dark);
 }
-
 #timer-indicator {
     width: 100%; height: 8px; background-color: rgba(0, 0, 0, 0.05);
     border-radius: 4px; margin-bottom: 15px; overflow: hidden;
@@ -223,21 +202,21 @@ h1, h2, h3 {
     background-image: linear-gradient(to right, var(--primary-color), var(--special-danger));
     border-radius: 4px; transition: width 0.5s linear;
 }
-
 #game-display {
     font-size: 2.5rem; font-weight: 500; letter-spacing: 10px;
     color: var(--text-dark); padding: 10px 0;
 }
 
-/* --- Keypad & Action Buttons --- */
+/* --- Keypad & Action Buttons (Refined Size) --- */
 .keypad {
     display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 12px; margin-bottom: 15px;
+    gap: 10px; margin-bottom: 15px;
 }
 .key {
-    padding: 18px; font-size: 1.6rem; font-weight: 500;
-    border-radius: var(--border-radius-small); border: none;
-    background-color: var(--content-bg); color: var(--text-dark);
+    padding: 15px; /* Reduced padding */
+    font-size: 1.4rem; /* Reduced font size */
+    font-weight: 500; border-radius: var(--border-radius-small); /* Smaller radius */
+    border: none; background-color: var(--content-bg); color: var(--text-dark);
     cursor: pointer; transition: all 0.2s ease;
     border: 1px solid rgba(255, 255, 255, 0.8);
 }
@@ -257,12 +236,10 @@ h1, h2, h3 {
 
 /* --- Modals & Settings --- */
 .modal-overlay {
-    background-color: rgba(92, 84, 112, 0.6);
-    backdrop-filter: blur(8px);
+    background-color: rgba(92, 84, 112, 0.6); backdrop-filter: blur(8px);
 }
 .modal-content {
-    background-color: var(--content-bg);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    background-color: var(--content-bg); border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: var(--shadow);
 }
 .modal-header { border-bottom-color: var(--border-color); }
