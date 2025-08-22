@@ -1,8 +1,8 @@
-/* --- General & Layout (New Layout + Pastel Theme) --- */
+/* --- General & Layout (New Layout + Dark Theme) --- */
 @import url('https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap');
 
 :root {
-    /* Pastel Color Palette (retained from previous theme) */
+    /* Pastel Color Palette for accents */
     --primary-color: #a2d2ff;   /* Baby Blue */
     --secondary-color: #bde0fe; /* Lighter Blue */
     --success-color: #caffbf;   /* Mint Green */
@@ -10,7 +10,7 @@
     --warning-color: #fdffb6;   /* Pale Yellow */
     --special-danger: #ff8fab;  /* Hot Pink for Assassinate button */
     
-    /* New Layout Colors (inspired by the image) */
+    /* New Layout Colors */
     --main-bg: #3D405B;         /* Dark Slate Blue for the main background */
     --content-bg: #4F537B;      /* Slightly lighter for content boxes */
     --text-bright: #FFFFFF;     /* Bright text for dark backgrounds */
@@ -37,7 +37,7 @@ body {
 
 .page {
     width: 100%;
-    max-width: 450px; /* Slightly wider for this layout */
+    max-width: 450px;
     padding: 20px;
     box-sizing: border-box;
 }
@@ -55,195 +55,60 @@ h1, h2, h3 {
     color: var(--text-bright);
 }
 
-/* --- Game Status Display --- */
-#gameplay-section .turn-info {
-    margin-bottom: 20px;
-}
-#gameplay-section #turn-indicator { /* e.g., "ผู้เล่น 2 กำลังทาย" */
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin-bottom: 5px;
-}
-#gameplay-section #target-indicator { /* e.g., "เป้าหมาย: ผู้เล่น 1" */
-    font-size: 1.1rem;
-    color: var(--text-muted);
-    margin-bottom: 20px;
-}
-
-/* --- Player Grid Layout --- */
-#player-list {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 25px;
-    position: relative;
-}
-
-.player-item {
-    padding: 12px;
+/* --- Home Page Layout (New) --- */
+#page-home {
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
-    min-height: 80px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-small);
-    background-color: rgba(255, 255, 255, 0.05); /* Subtle background */
-    position: relative;
-    z-index: 2;
-    transition: all 0.3s ease;
-}
-
-.player-item.attacker {
-    border-color: var(--special-danger);
-    box-shadow: 0 0 12px var(--special-danger);
-    transform: scale(1.05);
-}
-
-.player-item.target {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 12px var(--primary-color);
-    transform: scale(1.05);
-}
-
-.player-defeated {
-    opacity: 0.5;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-style: dashed;
-}
-
-.player-info { /* Player Name */
-    font-size: 1rem;
-    font-weight: 500;
-}
-.player-item > span { /* "เป้าหมาย" text */
-    font-size: 0.9rem;
-    color: var(--text-muted);
-}
-.hp-bar { display: flex; gap: 4px; margin-top: 5px; }
-.hp-point {
-    width: 12px;
-    height: 12px;
-    background-color: #ffafcc; /* Soft Strawberry */
-    border-radius: 50%;
-}
-.hp-point.lost { background: #6A6E94; }
-
-/* --- Secret Number & Guessing Area --- */
-.secret-number-area, .guess-input-area {
-    background-color: var(--content-bg);
-    border-radius: var(--border-radius-main);
+    align-items: center;
+    height: 100vh;
+    max-width: 100%;
     padding: 20px;
-    margin-bottom: 20px;
 }
-#my-secret-number-display {
-    font-size: 1rem;
-    color: var(--text-muted);
-    margin-bottom: 10px;
+
+.home-container {
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
 }
-#my-secret-number-display span { /* The actual number */
-    display: block;
+
+#page-home h1 {
     font-size: 2.5rem;
-    font-weight: 500;
-    letter-spacing: 8px;
+    font-weight: 600;
+    margin-bottom: 15px;
     color: var(--text-bright);
 }
 
-#timer-indicator { /* This is the progress bar */
+#page-home p {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    margin-bottom: 30px;
+}
+
+.input-group {
+    display: flex;
     width: 100%;
-    height: 6px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
-    margin-bottom: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-main);
     overflow: hidden;
 }
-#timer-indicator-bar { /* The moving part of the bar */
-    width: 100%; /* Controlled by JS */
-    height: 100%;
-    background-image: linear-gradient(to right, #ffafcc, var(--special-danger));
-    border-radius: 3px;
-    transition: width 0.5s linear;
-}
 
-#game-display { /* The ---- for guessing */
-    font-size: 2.5rem;
-    font-weight: 500;
-    letter-spacing: 10px;
-    color: var(--text-bright);
-    padding: 10px 0;
-}
-
-/* --- Keypad --- */
-.keypad {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 15px;
-}
-.key {
-    padding: 18px;
-    font-size: 1.6rem;
-    font-weight: 400;
-    border-radius: var(--border-radius-main);
-    border: 1px solid var(--border-color);
-    background-color: transparent;
-    color: var(--text-bright);
-    cursor: pointer;
-    transition: all 0.1s ease;
-}
-.key:active {
-    background-color: rgba(255, 255, 255, 0.1);
-    transform: scale(0.95);
-}
-
-/* --- Action Buttons --- */
-#btn-delete, #btn-guess {
-    font-size: 1.2rem;
-    font-weight: 500;
-    padding: 20px;
+.input-group input[type="text"] {
+    flex-grow: 1;
+    margin: 0;
     border: none;
+    border-radius: 0;
+    padding: 18px 20px;
+    font-size: 1.1rem;
+    background-color: #FFFFFF;
+    color: #333;
 }
-#btn-delete { background-color: var(--warning-color); color: var(--text-dark); }
-#btn-guess { background-color: var(--success-color); color: var(--text-dark); }
+.input-group input[type="text"]:focus {
+    outline: none;
+    box-shadow: none;
+}
 
-#btn-assassinate {
-    width: 100%;
-    padding: 15px;
+.input-group button {
+    margin: 0;
     border: none;
-    border-radius: var(--border-radius-main);
-    font-size: 1.2rem;
-    font-weight: 500;
-    cursor: pointer;
-    margin-top: 10px;
-    background-color: var(--special-danger);
-    color: var(--text-bright);
-    transition: all 0.2s ease;
-}
-#btn-assassinate:active {
-    transform: scale(0.98);
-    filter: brightness(1.1);
-}
-
-/* --- Other elements need to be adapted to the dark theme --- */
-.modal-overlay {
-    background-color: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-}
-.modal-content {
-    background-color: var(--content-bg);
-    color: var(--text-bright);
-    border: 1px solid var(--border-color);
-}
-.modal-header { border-bottom-color: var(--border-color); }
-.close-btn { color: var(--text-muted); }
-
-.chat-message.theirs { background-color: #6A6E94; }
-.chat-message.mine { background-color: var(--primary-color); color: var(--text-dark); }
-#chat-input { background-color: var(--main-bg); border-color: var(--border-color); color: var(--text-bright); }
-#chat-send-btn { background-color: var(--primary-color); color: var(--text-dark); }
-
-/* Hide elements not present in the new layout for clarity */
-#gameplay-section .game-header h2,
-#gameplay-section .game-header .game-header-buttons {
-    display: none;
-}
+    border-radius: 0;
