@@ -485,7 +485,6 @@ document.addEventListener('DOMContentLoaded', () => {
             playerListEl.appendChild(item);
         });
     }
-
     function updatePersonalHistory(roomData) {
         const historyModalBody = document.getElementById('history-modal-body');
         historyModalBody.innerHTML = '';
@@ -683,4 +682,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const goToPreLobbyBtn = document.getElementById('btn-go-to-pre-lobby');
-    const playerNameInpu
+    const playerNameInput = document.getElementById('input-player-name');
+    goToPreLobbyBtn.addEventListener('click', handleGoToPreLobby);
+    playerNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleGoToPreLobby(); });
+
+    buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
+    buttons.goToJoin.addEventListener('click', handleGoToJoin);
+    buttons.createRoom.addEventListener('click', createRoom);
+    buttons.leaveRoom.addEventListener('click', leaveRoom);
+    buttons.readyUp.addEventListener('click', handleReadyUp);
+    buttons.delete.addEventListener('click', handleDelete);
+    buttons.guess.addEventListener('click', () => handleAction(false));
+    buttons.assassinate.addEventListener('click', () => handleAction(true));
+    buttons.chatSend.addEventListener('click', () => {});
+    buttons.backToHome.addEventListener('click', () => {
+        playSound(sounds.click);
+        sounds.background.pause();
+        hasInteracted = false;
+        leaveRoom();
+        navigateTo('home');
+    });
+    buttons.playAgain.addEventListener('click', () => { playSound(sounds.click); navigateTo('preLobby'); });
+    inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') {} });
+    gameElements.keypad.addEventListener('click', handleKeypadClick);
+
+    const openSettings = () => { playSound(sounds.click); settingsElements.overlay.style.display = 'flex'; };
+    const closeSettings = () => { playSound(sounds.click); settingsElements.overlay.style.display = 'none'; };
+    settingsElements.openBtnHome.addEventListener('click', openSettings);
+    settingsElements.closeBtn.addEventListener('click', closeSettings);
+    settingsElements.overlay.addEventListener('click', (e) => { if (e.target === settingsElements.overlay) closeSettings(); });
+    settingsElements.toggleBgm.addEventListener('change', (e) => {
+        isBgmEnabled = e.target.checked;
+        localStorage.setItem('isBgmEnabled', isBgmEnabled);
+        updateSoundSettings();
+    });
+    settingsElements.toggleSfx.addEventListener('change', (e) => {
+        isSfxEnabled = e.target.checked;
+        localStorage.setItem('isSfxEnabled', isSfxEnabled);
+        playSound(sounds.click);
+    });
+
+    const savedPlayerName = sessionStorage.getItem('playerName');
+    if (savedPlayerName) {
+        playerNameInput.value = savedPlayerName;
+    }
+    updateSoundSettings();
+    navigateTo('home');
+});
