@@ -11,13 +11,15 @@
 </head>
 <body>
 
-    <!-- หน้าหลัก: กรอกชื่อ -->
+    <!-- หน้าหลัก: กรอกชื่อ (ฉบับแก้ไข) -->
     <div id="page-home" class="page">
-        <div class="card">
+        <div class="home-container">
             <h1>เกมทายเลขมหาประลัย</h1>
             <p>ใส่ชื่อของคุณเพื่อเริ่มเล่น</p>
-            <input type="text" id="input-player-name" placeholder="ชื่อผู้เล่น..." maxlength="12">
-            <button id="btn-go-to-pre-lobby" class="btn btn-primary">ไปต่อ</button>
+            <div class="input-group">
+                <input type="text" id="input-player-name" placeholder="ชื่อผู้เล่น..." maxlength="12">
+                <button id="btn-go-to-pre-lobby" class="btn">ไปต่อ</button>
+            </div>
         </div>
     </div>
 
@@ -85,18 +87,12 @@
         <div class="game-header">
             <h2 id="game-room-name">ห้อง: ...</h2>
             <div class="game-header-buttons">
-                <!-- เปลี่ยนเป็น Marquee Container -->
-                <div id="chat-marquee-container"></div>
                 <button id="history-toggle-btn" class="btn-icon">📜</button>
                 <button id="chat-toggle-btn" class="btn-icon">
                     💬<span id="chat-unread-indicator" style="display: none;"></span>
                 </button>
             </div>
         </div>
-
-        <div id="my-secret-number-display">เลขลับของคุณ: <span>????</span></div>
-
-        <div id="player-list"></div>
 
         <!-- ส่วนตั้งค่าเลขลับ -->
         <div id="setup-section" class="game-section">
@@ -114,20 +110,32 @@
         <!-- ส่วนการเล่นเกม -->
         <div id="gameplay-section" class="game-section" style="display: none;">
             <div class="turn-info">
-                <div id="timer-indicator">30</div>
-                <div id="target-indicator">เป้าหมาย: ...</div>
                 <div id="turn-indicator">ผู้ทาย: ...</div>
+                <div id="target-indicator">เป้าหมาย: ...</div>
             </div>
-            <div id="game-display"></div>
+            
+            <div id="player-list">
+                <div id="attack-animation-container"></div>
+            </div>
+
+            <div class="secret-number-area">
+                <div id="my-secret-number-display">เลขลับของคุณ: <span>????</span></div>
+            </div>
+
+            <div class="guess-input-area">
+                <div id="timer-indicator"><div id="timer-indicator-bar"></div></div>
+                <div id="game-display">----</div>
+            </div>
+
             <div class="keypad">
                 <button class="key">1</button> <button class="key">2</button> <button class="key">3</button>
                 <button class="key">4</button> <button class="key">5</button> <button class="key">6</button>
                 <button class="key">7</button> <button class="key">8</button> <button class="key">9</button>
-                <button id="btn-delete" class="key key-special">ลบ</button>
+                <button id="btn-delete" class="key">ลบ</button>
                 <button class="key">0</button>
-                <button id="btn-guess" class="key key-action">ทาย</button>
+                <button id="btn-guess" class="key">ทาย</button>
             </div>
-            <button id="btn-assassinate" class="btn btn-danger">ตุยซะเถอะ!</button>
+            <button id="btn-assassinate" class="btn-danger">ตุยซะเถอะ!</button>
         </div>
 
         <button id="btn-leave-room" class="btn btn-secondary">ออกจากห้อง</button>
@@ -179,19 +187,4 @@
         </div>
     </div>
 
-    <!-- หน้าสรุปผลเกม -->
-    <div id="page-summary" class="page" style="display: none;">
-        <div class="card">
-            <h1>สรุปผลการแข่งขัน</h1>
-            <div id="summary-winner"></div>
-            <div id="summary-player-list"></div>
-            <button id="btn-play-again" class="btn btn-success">เล่นอีกครั้ง</button>
-            <button id="btn-back-to-home" class="btn btn-secondary">กลับไปหน้าแรก</button>
-        </div>
-    </div>
-
-    <!-- โค้ด JavaScript ของเกม -->
-    <script src="script.js"></script>
-
-</body>
-</html>
+    <!-- หน้าสรุปผล
