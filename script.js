@@ -200,7 +200,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Game Logic ---
+    // --- New Animation Function ---
+    function animateAttack(attackerId, targetId) {
+        const container = document.getElementById('attack-animation-container');
+        const attackerEl = document.getElementById(`player-${attackerId}`);
+        const targetEl = document.getElementById(`player-${targetId}`);
+        container.innerHTML = ''; // เคลียร์อนิเมชันเก่าทิ้ง
+
+        if (!attackerEl || !targetEl) return;
+
+        // คำนวณตำแหน่งกึ่งกลางของแต่ละช่อง
+        const attackerRect = attackerEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const containerRect = container.parentElement.getBoundingClientRect(); // ใช้ parentElement (player-list)
+
+        const startX = attackerRect.left + attackerRect.width / 2 - containerRect.left;
+        const startY = attackerRect.top + attackerRect.height / 2 - containerRect.top;
+        const endX = targetRect.left + targetRect.width / 2 - containerRect.left;
+        const endY = targetRect.top + targetRect.height / 2 - containerRect.top;
+
+        // สร้าง Path สำหรับให้ > วิ่งตาม
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        // ปรับเส้นโค้งให้สวยขึ้นเล็กน้อย
+        const controlX = (startX + endX) / 2;
+        const controlY = (startY + endY) / 2 - (Math.abs(startY - endY) < 50 ? 50 : 0); // ทำให้โค้งออกถ้าอยู่แถวเดียวกัน
+        path.setAttribute('d', `M${startX},${startY} Q${controlX},${controlY} ${endX},${endY}`);
+        path.setAttribute('id', 'arrow-path');
+        path.style.display = 'none'; // ไม่ต้องแสดงเส้น Path
+
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+        svg.style.position = 'absolute';
+        svg.style.overflow = 'visible'; // ให้ลูกศรวิ่งนอกกรอบได้
+        svg.appendChild(path);
+        container.appendChild(svg);
+
+        // สร้างลูกศร > จำนวน 5 ตัวให้วิ่งตามกัน
+        for (let i = 0; i < 5; i++) {
+            const arrow = document.createElement('div');
+            arrow.className = 'attack-arrow';
+            arrow.textContent = '>';
+            arrow.style.offsetPath = `path("${path.getAttribute('d')}")`;
+            arrow.style.animationDelay = `${i * 0.2}s`; // ทำให้ลูกศรแต่ละตัวเริ่มวิ่งไม่พร้อมกัน
+            container.appendChild(arrow);
+        }
+    }
+
+    // --- Game Logic (Part 1) ---
     function listenToRoomUpdates() {
         if (!roomRef) return;
         if (roomListener) roomRef.off('value', roomListener);
@@ -211,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             const roomData = snapshot.val();
-            updatePlayerList(roomData);
+            updatePlayerList(roomData); // อัปเดต Player List ก่อนเสมอ
             updateChat(roomData.chat);
 
             const myPlayer = roomData.players[currentPlayerId];
@@ -254,8 +301,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startGame(playerIds) {
-        roomRef.update({ status: 'playing', playerOrder: playerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+        // สลับลำดับผู้เล่นแบบสุ่มเมื่อเริ่มเกม
+        const shuffledPlayerIds = playerIds.sort(() => Math.random() - 0.5);
+        roomRef.update({ status: 'playing', playerOrder: shuffledPlayerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
     }
+
+    // --- Game Logic (Part 2) & UI Updates ---
 
     function updateGameUI(roomData) {
         gameElements.setupSection.style.display = 'none';
@@ -271,6 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
+        if (activePlayers.length <= 1) return; // หยุดถ้าผู้เล่นไม่พอ
 
         const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
         const targetPlayerId = activePlayers[currentTargetIndexInActive];
@@ -278,24 +330,34 @@ document.addEventListener('DOMContentLoaded', () => {
         gameElements.target.textContent = `เป้าหมาย: ${targetPlayerName}`;
 
         const attackers = activePlayers.filter(id => id !== targetPlayerId);
-        if (attackers.length === 0) { return; } 
+        if (attackers.length === 0) { return; }
 
         const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
         const attackerPlayerId = attackers[currentAttackerIndexInAttackers];
         const attackerPlayerName = players[attackerPlayerId].name;
         gameElements.turn.textContent = `ผู้ทาย: ${attackerPlayerName}`;
 
+        // เรียกใช้ฟังก์ชันอนิเมชัน
+        // ใช้ setTimeout เล็กน้อยเพื่อให้ DOM อัปเดตตำแหน่งก่อนคำนวณ
+        setTimeout(() => animateAttack(attackerPlayerId, targetPlayerId), 100);
+
         const isMyTurn = attackerPlayerId === currentPlayerId;
         const amIDefeated = players[currentPlayerId]?.status === 'defeated';
         gameElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
         buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
 
-        gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
+        gameElements.turn.style.color = isMyTurn ? 'var(--success-color)' : 'var(--dark-color)';
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
             playSound(sounds.yourTurn);
         }
-        if (targetPlayerId === currentPlayerId) { gameElements.turn.textContent = `คุณคือเป้าหมาย!`; gameElements.turn.style.color = '#dc3545'; }
+        if (targetPlayerId === currentPlayerId) {
+            gameElements.target.textContent = `คุณคือเป้าหมาย!`;
+            gameElements.target.style.color = 'var(--danger-color)';
+        } else {
+            gameElements.target.style.color = 'var(--dark-color)';
+        }
+
 
         gameElements.timer.style.display = 'block';
         turnTimer = setInterval(() => {
@@ -326,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let updates = {};
             updates[`/players/${currentPlayerId}/lastGuess`] = { guess: currentInput, timestamp: firebase.database.ServerValue.TIMESTAMP };
-            updates[`/guessHistory/${database.ref().push().key}`] = { attackerId: currentPlayerId, targetId: targetPlayerId, guess: currentInput, bulls, cows, isAssassination };
+            updates[`/guessHistory/${database.ref().push().key}`] = { attackerId: currentPlayerId, targetId: targetPlayerId, guess: currentInput, bulls, cows, isAssassination, timestamp: firebase.database.ServerValue.TIMESTAMP };
             updates[`/players/${currentPlayerId}/stats/guesses`] = (players[currentPlayerId].stats.guesses || 0) + 1;
 
             if (isAssassination) {
@@ -342,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 if (isCorrect) {
+                    playSound(sounds.win); // เล่นเสียงเมื่อทายถูก
                     updates[`/players/${targetPlayerId}/status`] = 'defeated';
                     updates[`/players/${targetPlayerId}/hp`] = 0;
                 }
@@ -372,9 +435,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
             const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-            if (activePlayers.length <= 1) { 
-                roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP }); 
-                return; 
+            if (activePlayers.length <= 1) {
+                roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+                return;
             }
 
             const currentTargetId = activePlayers[targetPlayerIndex % activePlayers.length];
@@ -382,7 +445,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const nextAttackerIndex = (attackerTurnIndex + 1);
             if (nextAttackerIndex >= attackers.length) {
-                roomRef.update({ targetPlayerIndex: (targetPlayerIndex + 1), attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+                // เมื่อวนครบรอบผู้ทาย ให้เปลี่ยนเป้าหมาย
+                const nextTargetPlayerIndex = (targetPlayerIndex + 1) % activePlayers.length;
+                roomRef.update({ targetPlayerIndex: nextTargetPlayerIndex, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
             } else {
                 roomRef.update({ attackerTurnIndex: nextAttackerIndex, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
             }
@@ -393,37 +458,84 @@ document.addEventListener('DOMContentLoaded', () => {
         let bulls = 0, cows = 0;
         const secretChars = secret.split('');
         const guessChars = guess.split('');
+        // Check for Bulls (correct digit in correct position)
         for (let i = guessChars.length - 1; i >= 0; i--) {
-            if (guessChars[i] === secretChars[i]) { bulls++; secretChars.splice(i, 1); guessChars.splice(i, 1); }
+            if (guessChars[i] === secretChars[i]) {
+                bulls++;
+                secretChars.splice(i, 1);
+                guessChars.splice(i, 1);
+            }
         }
+        // Check for Cows (correct digit in wrong position)
         const secretCounts = {};
         secretChars.forEach(c => secretCounts[c] = (secretCounts[c] || 0) + 1);
-        guessChars.forEach(c => { if (secretCounts[c] > 0) { cows++; secretCounts[c]--; } });
+        guessChars.forEach(c => {
+            if (secretCounts[c] > 0) {
+                cows++;
+                secretCounts[c]--;
+            }
+        });
         return { bulls, cows };
     }
 
-    // --- UI Updates ---
+    // --- UI Update Functions ---
     function updatePlayerList(roomData) {
-        const { players } = roomData;
-        gameElements.playerList.innerHTML = '';
+        const { players, status, playerOrder, targetPlayerIndex, attackerTurnIndex } = roomData;
+        const playerListEl = gameElements.playerList;
+        // เคลียร์เฉพาะผู้เล่น แต่เก็บ container ของอนิเมชันไว้
+        Array.from(playerListEl.getElementsByClassName('player-item')).forEach(el => el.remove());
+
         if (!players) return;
-        Object.entries(players).forEach(([id, player]) => {
+
+        let attackerPlayerId = null;
+        let targetPlayerId = null;
+
+        if (status === 'playing' && playerOrder) {
+            const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
+            if (activePlayers.length > 1) {
+                const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
+                targetPlayerId = activePlayers[currentTargetIndexInActive];
+
+                const attackers = activePlayers.filter(id => id !== targetPlayerId);
+                if (attackers.length > 0) {
+                    const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
+                    attackerPlayerId = attackers[currentAttackerIndexInAttackers];
+                }
+            }
+        }
+
+        // ใช้ playerOrder ถ้ามี เพื่อให้ลำดับคงที่
+        const playerIdsToRender = playerOrder || Object.keys(players);
+
+        playerIdsToRender.forEach(id => {
+            const player = players[id];
+            if (!player) return;
+
             const item = document.createElement('div');
             item.className = 'player-item';
+            item.id = `player-${id}`;
+
             if (player.status === 'defeated') item.classList.add('player-defeated');
+            if (id === attackerPlayerId) item.classList.add('attacker');
+            if (id === targetPlayerId) item.classList.add('target');
 
             const hpBar = `<div class="hp-bar">${[...Array(3)].map((_, i) => `<div class="hp-point ${i < player.hp ? '' : 'lost'}"></div>`).join('')}</div>`;
-            const readyStatus = roomData.status === 'waiting' ? (player.isReady ? `<span style="color:green;">พร้อมแล้ว</span>` : `<span>กำลังรอ...</span>`) : hpBar;
+            const readyStatus = roomData.status === 'waiting' ? (player.isReady ? `<span style="color:var(--success-color);">พร้อมแล้ว</span>` : `<span>กำลังรอ...</span>`) : hpBar;
 
             let recentGuessHTML = '';
             if (player.lastGuess && (Date.now() - player.lastGuess.timestamp < 3000)) {
                 recentGuessHTML = `<span class="recent-guess">${player.lastGuess.guess}</span>`;
             }
 
-            item.innerHTML = `<div class="player-info"><span>${player.name}</span> ${recentGuessHTML}</div> ${readyStatus}`;
-            gameElements.playerList.appendChild(item);
+            item.innerHTML = `
+                <div class="player-info">${player.name}</div>
+                ${recentGuessHTML}
+                <div style="margin-top: auto;">${readyStatus}</div>
+            `;
+            playerListEl.appendChild(item);
         });
     }
+
 
     function updatePersonalHistory(roomData) {
         const { players, guessHistory } = roomData;
@@ -445,11 +557,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const table = document.createElement('table');
             table.className = 'history-table';
-            table.innerHTML = `<thead><tr><th>เลขที่ทาย</th><th>ผล</th></tr></thead>`;
+            table.innerHTML = `<thead><tr><th>เลขที่ทาย</th><th>ผล (Bulls/Cows)</th></tr></thead>`;
             const tbody = document.createElement('tbody');
-            logs.slice().reverse().forEach(log => {
+            logs.sort((a, b) => b.timestamp - a.timestamp).forEach(log => { // เรียงใหม่ไปเก่า
                 const row = document.createElement('tr');
-                const hints = `<span class="hint-bull">${log.bulls}</span> <span class="hint-cow">${log.cows}</span>`;
+                const hints = `<span class="hint-bull">${log.bulls}B</span> <span class="hint-cow">${log.cows}C</span>`;
                 row.innerHTML = `<td class="history-guess">${log.guess} ${log.isAssassination ? '💀' : ''}</td><td>${hints}</td>`;
                 tbody.appendChild(row);
             });
@@ -505,12 +617,13 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.className = 'chat-marquee-item';
         marquee.textContent = `${msg.senderName}: ${msg.text}`;
         chatElements.marqueeContainer.appendChild(marquee);
-        setTimeout(() => marquee.remove(), 6000);
+        setTimeout(() => marquee.remove(), 5900); // ลบก่อน animation จบเล็กน้อย
     }
 
     // --- End Game Logic ---
     function endGame(roomData) {
         if (turnTimer) clearInterval(turnTimer);
+        document.getElementById('attack-animation-container').innerHTML = ''; // หยุดอนิเมชัน
 
         if (roomData.winnerName !== "ไม่มีผู้ชนะ") {
             playSound(sounds.win);
@@ -600,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('summary');
     }
 
-    // --- General Functions ---
+    // --- General Functions & Event Listeners ---
     function leaveRoom() {
         playSound(sounds.click);
         if (playerRef) playerRef.remove();
@@ -618,8 +731,9 @@ document.addEventListener('DOMContentLoaded', () => {
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
             let secretNumber = '';
+            const digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
             for (let i = 0; i < digitCount; i++) {
-                secretNumber += Math.floor(Math.random() * 10).toString();
+                secretNumber += digits[Math.floor(Math.random() * digits.length)];
             }
             playerRef.update({ isReady: true, secretNumber: secretNumber });
         });
@@ -630,78 +744,4 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
-            if (currentInput.length < digitCount) {
-                currentInput += e.target.textContent;
-                gameElements.gameDisplay.textContent = currentInput;
-            }
-        });
-    }
-
-    function handleDelete() {
-        playSound(sounds.click);
-        currentInput = currentInput.slice(0, -1);
-        gameElements.gameDisplay.textContent = currentInput;
-    }
-
-    // --- Event Listeners ---
-    buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
-    buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
-    buttons.goToJoin.addEventListener('click', handleGoToJoin);
-    buttons.createRoom.addEventListener('click', createRoom);
-    buttons.leaveRoom.addEventListener('click', leaveRoom);
-    buttons.readyUp.addEventListener('click', handleReadyUp);
-    buttons.delete.addEventListener('click', handleDelete);
-    buttons.guess.addEventListener('click', () => handleAction(false));
-    buttons.assassinate.addEventListener('click', () => handleAction(true));
-    buttons.chatSend.addEventListener('click', handleSendChat);
-
-    buttons.backToHome.addEventListener('click', () => {
-        playSound(sounds.click);
-        sounds.background.pause();
-        hasInteracted = false;
-        leaveRoom();
-        navigateTo('home');
-    });
-
-    buttons.playAgain.addEventListener('click', () => {
-        playSound(sounds.click);
-        navigateTo('preLobby');
-    });
-
-    inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
-    gameElements.keypad.addEventListener('click', handleKeypadClick);
-
-    historyElements.toggleBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'flex'; });
-    historyElements.closeBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'none'; });
-    historyElements.overlay.addEventListener('click', (e) => { if (e.target === historyElements.overlay) { playSound(sounds.click); historyElements.overlay.style.display = 'none'; } });
-
-    chatElements.toggleBtn.addEventListener('click', () => {
-        playSound(sounds.click);
-        chatElements.overlay.style.display = 'flex';
-        chatElements.unreadIndicator.style.display = 'none';
-        isChatOpen = true;
-        setTimeout(() => {
-            chatElements.body.scrollTop = chatElements.body.scrollHeight;
-        }, 0);
-    });
-    chatElements.closeBtn.addEventListener('click', () => {
-        playSound(sounds.click);
-        chatElements.overlay.style.display = 'none';
-        isChatOpen = false;
-    });
-    chatElements.overlay.addEventListener('click', (e) => {
-        if (e.target === chatElements.overlay) {
-            playSound(sounds.click);
-            chatElements.overlay.style.display = 'none';
-            isChatOpen = false;
-        }
-    });
-
-    // --- Initial Load ---
-    const savedPlayerName = sessionStorage.getItem('playerName');
-    if (savedPlayerName) {
-        inputs.playerName.value = savedPlayerName;
-    }
-    navigateTo('home');
-
-});
+            if (currentInput.length < digitCount
