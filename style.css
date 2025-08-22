@@ -1,30 +1,23 @@
-/* --- General & Layout (Final Polish) --- */
-@import url('https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap');
+/* --- General & Layout --- */
+@import url('https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;600&display=swap');
 
 :root {
-    --primary-color: #fec8d8;   /* Peachy Pink */
-    --secondary-color: #a7c5eb; /* Softer Blue */
-    --success-color: #c4eada;   /* Minty Green */
-    --warning-color: #fff2b2;   /* Creamy Yellow */
-    --special-danger: #ffafcc;  /* Strawberry Pink */
-    
-    --main-bg-start: #fde4e4;   /* Gradient Start */
-    --main-bg-end: #d2e7f7;     /* Gradient End */
+    --bg-gradient: linear-gradient(135deg, #fce3ec, #e8e6f9);
     --content-bg: rgba(255, 255, 255, 0.7);
-    --text-dark: #5C5470;
-    --text-bright: #FFFFFF;
-    --border-color: #e6dcdc;
-
+    --primary-color: #ff8fab;
+    --secondary-color: #a29bfe;
+    --success-color: #7bed9f;
+    --danger-color: #ff7675;
+    --text-dark: #6c5ce7;
+    --text-light: #828282;
+    --border-color: rgba(108, 92, 231, 0.2);
     --font-family: 'Mitr', sans-serif;
-    --border-radius-main: 24px;
-    --border-radius-small: 16px;
-    --shadow: 0 8px 25px rgba(180, 180, 210, 0.2);
+    --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
 }
 
 body {
     font-family: var(--font-family);
-    background-color: var(--main-bg-start); /* Fallback */
-    background-image: linear-gradient(135deg, var(--main-bg-start) 0%, var(--main-bg-end) 100%);
+    background: var(--bg-gradient);
     color: var(--text-dark);
     margin: 0;
     display: flex;
@@ -32,270 +25,294 @@ body {
     align-items: center;
     min-height: 100vh;
     text-align: center;
-    overflow-x: hidden; /* Prevent horizontal scroll */
+    -webkit-tap-highlight-color: transparent;
 }
 
-/* --- Page Navigation (FIXED) --- */
 .page {
     width: 100%;
     max-width: 450px;
     padding: 20px;
     box-sizing: border-box;
-    display: none; /* Hide all pages by default */
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-}
-
-.page.active {
-    display: flex; /* Show only the active page */
 }
 
 .card {
-    width: 100%;
     background: var(--content-bg);
-    backdrop-filter: blur(10px);
     padding: 30px;
-    border-radius: var(--border-radius-main);
+    border-radius: 20px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    position: relative;
 }
 
-h1, h2, h3 { margin-top: 0; font-weight: 500; }
+h1 { font-size: 2.2rem; line-height: 1.2; margin-bottom: 10px; }
+h2 { font-size: 1.8rem; }
+h3 { font-size: 1.4rem; color: var(--text-dark); }
+p { color: var(--text-light); font-size: 1rem; }
 
-/* --- Home Page (FIXED) --- */
-.home-container {
-    width: 100%; max-width: 400px; text-align: center;
-    background: var(--content-bg); backdrop-filter: blur(10px);
-    padding: 40px; border-radius: var(--border-radius-main);
-    box-shadow: var(--shadow); border: 1px solid rgba(255, 255, 255, 0.5);
-}
-#page-home h1 { font-size: 2.2rem; font-weight: 600; margin-bottom: 15px; line-height: 1.2; }
-#page-home p { font-size: 1.1rem; opacity: 0.8; margin-bottom: 30px; }
-
-.input-group {
-    display: flex; width: 100%;
-    border-radius: var(--border-radius-small);
-    overflow: hidden; border: 1px solid var(--border-color);
-}
-.input-group input[type="text"] {
-    flex: 1 1 70%;
-    margin: 0; border: none; padding: 15px 20px; font-size: 1rem;
-    background-color: #fff; color: var(--text-dark);
-}
-.input-group input[type="text"]:focus { outline: none; }
-.input-group button {
-    flex: 1 1 30%;
-    margin: 0; border: none; padding: 15px; font-size: 1rem;
-    background-color: var(--primary-color); color: var(--text-bright);
-    cursor: pointer; transition: background-color 0.2s;
-}
-
-/* --- General Button Styles (FIXED) --- */
+/* --- Buttons & Inputs --- */
 .btn {
-    display: block; width: 100%; padding: 15px; border: none;
-    border-radius: var(--border-radius-small); font-size: 1.1rem;
-    font-family: var(--font-family); cursor: pointer; margin-top: 10px;
-    transition: all 0.2s ease;
+    display: block;
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 15px;
+    font-size: 1.1rem;
+    font-family: var(--font-family);
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.2s ease-in-out;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
-.btn:active { transform: scale(0.98); }
-.btn-primary { background-color: var(--primary-color); color: var(--text-bright); }
-.btn-secondary { background-color: var(--secondary-color); color: var(--text-bright); }
-.btn-danger { background-color: var(--special-danger); color: var(--text-bright); }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background-color: var(--primary-color); color: white; }
+.btn-secondary { background-color: var(--secondary-color); color: white; }
+.btn-danger { background-color: var(--danger-color); color: white; }
 .btn-success { background-color: var(--success-color); color: var(--text-dark); }
 
-.button-group { display: flex; gap: 10px; margin-top: 20px; }
-.button-group .btn { margin-top: 0; }
+input[type="text"], select {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    box-sizing: border-box;
+    font-size: 1rem;
+    font-family: var(--font-family);
+    background-color: rgba(255, 255, 255, 0.8);
+    color: var(--text-dark);
+}
+input[type="text"]::placeholder { color: #b2bec3; }
 
-/* --- Lobby Create/Join Page (FIXED) --- */
 .form-group {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 15px; width: 100%;
+    text-align: left;
+    margin-bottom: 15px;
 }
-.form-group label { font-size: 1rem; text-align: left; flex-basis: 50%; }
-.form-group input, .form-group select {
-    flex-basis: 50%; margin: 0; padding: 10px;
-    border-radius: var(--border-radius-small);
-    border: 1px solid var(--border-color); background-color: #fff;
+.form-group label {
+    font-weight: 400;
+    margin-bottom: 8px;
+    display: block;
+    color: var(--text-dark);
 }
-#page-lobby-create .btn-primary { margin-top: 20px; }
 
-/* --- Room List (FIXED) --- */
+/* --- หน้าแรก (Home) --- */
+/* แก้ไข: ทำให้ปุ่ม "ไปต่อ" อยู่ใต้ช่องใส่ชื่อ */
+#page-home .btn-primary {
+    margin-top: 15px;
+}
+
+/* --- หน้าคั่น (Pre-Lobby) --- */
+.pre-lobby-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* --- หน้าสร้างห้อง (Lobby Create) --- */
+#page-lobby-create .btn-primary {
+    margin-top: 20px;
+}
+
+/* --- หน้าเข้าร่วมห้อง (Lobby Join) --- */
 #room-list-container {
-    width: 100%; display: flex; flex-direction: column; gap: 10px;
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 .room-item {
-    background-color: var(--content-bg); padding: 15px;
-    border-radius: var(--border-radius-small); cursor: pointer;
-    transition: all 0.2s ease; border: 1px solid var(--border-color);
-    text-align: center; font-size: 1.1rem;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 15px 20px;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+    text-align: left;
+    border: 1px solid var(--border-color);
 }
-.room-item:hover { background-color: var(--secondary-color); color: var(--text-bright); }
-
-/* --- Game Page Layout (FIXED) --- */
-#page-game { align-items: flex-start; }
-.game-content-wrapper { width: 100%; }
-
-.game-section {
-    width: 100%;
-    margin-bottom: 20px;
+.room-item:hover {
+    background-color: white;
+    transform: scale(1.02);
 }
 
-.turn-info { margin-bottom: 20px; }
-#turn-indicator { font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; }
-#target-indicator { font-size: 1.1rem; color: var(--text-dark); opacity: 0.8; }
+/* --- หน้าเกม (Game Page) --- */
+.game-layout {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    max-width: 450px;
+}
+.game-main-column { flex-grow: 1; display: flex; flex-direction: column; gap: 15px; }
+.game-sidebar-column { width: 80px; display: flex; flex-direction: column; justify-content: flex-end; }
+.game-sidebar-column .btn { padding: 15px 10px; font-size: 0.9rem; }
 
-/* --- Player Grid Layout (FIXED Size) --- */
-#player-list {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-    gap: 10px; margin-bottom: 20px; position: relative;
-}
-.player-item {
-    padding: 10px; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; min-height: 70px;
-    border-radius: var(--border-radius-small); background-color: var(--content-bg);
-    position: relative; z-index: 2; transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow: 0 4px 10px rgba(180, 180, 210, 0.1);
-}
-.player-info { font-size: 0.9rem; font-weight: 500; }
-.player-item.attacker {
-    border-color: var(--special-danger); box-shadow: 0 0 15px var(--special-danger);
-    transform: scale(1.05);
-}
-.player-item.target {
-    border-color: var(--primary-color); box-shadow: 0 0 15px var(--primary-color);
-    transform: scale(1.05);
-}
-.player-defeated {
-    opacity: 0.6; background-color: rgba(200, 200, 200, 0.2);
-    border-style: dashed;
-}
-.player-item .hp-bar { display: flex; gap: 4px; margin-top: 5px; }
-.player-item .hp-point { width: 12px; height: 12px; background-color: var(--special-danger); border-radius: 50%; }
-.player-item .hp-point.lost { background: #dcd3d3; }
-
-/* --- Animation: Attacker to Target --- */
-#attack-animation-container {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    overflow: hidden; pointer-events: none; z-index: 1;
-}
-.attack-arrow {
-    position: absolute; color: var(--special-danger); font-size: 1.5rem;
-    font-weight: bold; text-shadow: 0 0 5px white;
-    animation: move-arrow 1.5s linear infinite; opacity: 0;
-}
-@keyframes move-arrow {
-    0% { opacity: 1; offset-distance: 0%; }
-    90% { opacity: 1; }
-    100% { opacity: 0; offset-distance: 100%; }
-}
-
-/* --- Secret Number & Guessing Area (FIXED Size) --- */
-.secret-number-area, .guess-input-area {
-    background-color: var(--content-bg); border-radius: var(--border-radius-main);
-    padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255, 255, 255, 0.6);
+.game-card {
+    background: var(--content-bg);
+    padding: 15px;
+    border-radius: 20px;
     box-shadow: var(--shadow);
-}
-#my-secret-number-display { font-size: 1rem; opacity: 0.8; margin-bottom: 5px; }
-#my-secret-number-display span { font-size: 2rem; letter-spacing: 5px; }
-#timer-indicator {
-    width: 100%; height: 8px; background-color: rgba(0, 0, 0, 0.05);
-    border-radius: 4px; margin-bottom: 10px; overflow: hidden;
-}
-#timer-indicator-bar {
-    width: 100%; height: 100%;
-    background-image: linear-gradient(to right, var(--primary-color), var(--special-danger));
-    border-radius: 4px; transition: width 0.5s linear;
-}
-#game-display { font-size: 2rem; letter-spacing: 8px; }
-
-/* --- Keypad (FIXED Size) --- */
-.keypad {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 10px; margin-bottom: 15px;
-}
-.key {
-    padding: 12px; font-size: 1.3rem; font-weight: 500;
-    border-radius: var(--border-radius-small); border: none;
-    background-color: var(--content-bg); color: var(--text-dark);
-    cursor: pointer; transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.8);
-}
-.key:active { transform: scale(0.95); filter: brightness(0.95); }
-#btn-delete { background-color: var(--warning-color); }
-#btn-guess { background-color: var(--success-color); }
-.keypad.disabled .key {
-    background-color: #f8f9fa; color: #adb5bd;
-    cursor: not-allowed; pointer-events: none;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
 }
 
-#btn-assassinate { padding: 12px; font-size: 1.1rem; }
-
-/* --- Modals & Settings (COMPLETE) --- */
+/* แก้ไข: ส่วนหัวของหน้าเล่นเกม */
+.game-header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 10px;
+}
+#game-turn-indicator { margin: 0; font-size: 1.6rem; }
+#game-target-indicator { margin: 5px 0 10px 10px; text-align: left; font-size: 1rem; }
+.game-header-buttons { display: flex; gap: 5px; }
 .btn-icon {
     background: none; border: none; font-size: 1.8rem;
-    cursor: pointer; padding: 0 10px; position: relative;
+    cursor: pointer; padding: 5px; position: relative;
+    color: var(--text-dark);
 }
-.settings-button {
-    position: absolute; top: 20px; right: 20px; z-index: 10;
-    color: var(--text-dark); opacity: 0.6;
+#chat-unread-indicator {
+    position: absolute; top: 5px; right: 5px; width: 10px; height: 10px;
+    background-color: var(--danger-color); border-radius: 50%; border: 2px solid white;
 }
+
+/* แก้ไข: แสดงรายชื่อผู้เล่นในห้องรอ */
+.player-list-setup {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.player-list-setup .player-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.5);
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 1rem;
+}
+
+#player-list-container { position: relative; }
+#player-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+}
+.player-item {
+    background: white;
+    padding: 10px;
+    border-radius: 15px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+.player-item.target { border-color: var(--danger-color); }
+.player-item.attacker { border-color: var(--success-color); }
+.player-item.player-defeated { opacity: 0.5; }
+.player-info { font-weight: 600; }
+.hp-bar { display: flex; gap: 4px; margin-top: 5px; justify-content: center; }
+.hp-point { width: 12px; height: 12px; background-color: var(--primary-color); border-radius: 50%; }
+.hp-point.lost { background-color: #ddd; }
+
+#my-secret-number-display p { margin: 0 0 5px 0; font-size: 0.9rem; }
+#my-secret-number-text { font-size: 2.2rem; font-weight: 600; letter-spacing: 3px; }
+
+#guess-area { padding: 10px; }
+#timer-bar-container { width: 100%; height: 8px; background-color: var(--border-color); border-radius: 4px; overflow: hidden; margin-bottom: 10px; }
+#timer-bar { height: 100%; width: 100%; background-color: var(--primary-color); transition: width 0.1s linear; }
+#game-display { font-size: 2rem; font-weight: 600; letter-spacing: 5px; }
+
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.key {
+    padding: 15px; font-size: 1.5rem; border-radius: 15px;
+    border: none; background-color: var(--content-bg);
+    cursor: pointer; color: var(--text-dark);
+    transition: background-color 0.2s;
+}
+.key:active { background-color: white; }
+.key-special { background-color: rgba(162, 155, 254, 0.5); }
+.key-action { background-color: var(--success-color); }
+.keypad.disabled .key { background-color: #f1f2f6; color: #b2bec3; pointer-events: none; }
+
+#btn-assassinate { margin-top: 15px; }
+
+/* --- หน้าสรุปผล (Summary) --- */
+/* แก้ไข: ปรับปรุงการแสดงผลหน้าสถิติ */
+#summary-winner {
+    background: var(--success-color);
+    color: white;
+    padding: 15px;
+    border-radius: 15px;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+#summary-player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+.summary-player-card {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 15px;
+    border-radius: 15px;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.summary-player-card.winner {
+    border: 2px solid var(--success-color);
+}
+.summary-player-info .player-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+.summary-player-info .player-title {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    font-style: italic;
+}
+.summary-player-status {
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 10px;
+}
+.summary-player-status.win {
+    background-color: var(--success-color);
+    color: white;
+}
+.summary-player-status.lose {
+    background-color: #dfe6e9;
+    color: var(--text-light);
+}
+
+/* --- Modals (Settings, History, Chat) --- */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(92, 84, 112, 0.6);
-    backdrop-filter: blur(8px);
-    display: none; /* Hidden by default */
-    justify-content: center; align-items: center; z-index: 1000;
-}
-.modal-content {
-    background-color: var(--content-bg);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    box-shadow: var(--shadow);
-    padding: 20px; border-radius: var(--border-radius-main);
-    width: 90%; max-width: 450px; max-height: 80vh;
-    display: flex; flex-direction: column;
+    background-color: rgba(0,0,0,0.4); z-index: 1000;
+    display: flex; justify-content: center; align-items: center;
 }
 .modal-header {
     display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px; margin-bottom: 15px;
 }
-.close-btn {
-    background: none; border: none; font-size: 2rem;
-    cursor: pointer; color: var(--text-dark); opacity: 0.7;
-}
-.settings-body { display: flex; flex-direction: column; gap: 15px; }
-.settings-row {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 1.2rem;
-}
-.switch { position: relative; display: inline-block; width: 60px; height: 34px; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider {
-    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #ccc; transition: .4s;
-}
-.slider:before {
-    position: absolute; content: ""; height: 26px; width: 26px;
-    left: 4px; bottom: 4px; background-color: white; transition: .4s;
-}
-input:checked + .slider { background-color: var(--primary-color); }
-input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
-input:checked + .slider:before { transform: translateX(26px); }
-.slider.round { border-radius: 34px; }
-.slider.round:before { border-radius: 50%; }
+.close-btn { background: none; border: none; font-size: 2rem; cursor: pointer; color: var(--text-dark); }
 
-/* --- Other Modals (Chat, History, Defeated, etc.) --- */
-.chat-input-area { display: flex; margin-top: 15px; gap: 10px; }
-#chat-input { flex-grow: 1; margin: 0; }
-#chat-send-btn {
-    padding: 10px 15px; border: none; background-color: var(--primary-color);
-    color: white; border-radius: var(--border-radius-small); cursor: pointer;
+/* --- อื่นๆ --- */
+.btn-settings { position: absolute; top: 15px; right: 15px; }
+.defeated-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(45, 52, 54, 0.85); z-index: 999;
+    display: flex; justify-content: center; align-items: center;
+    flex-direction: column; text-align: center; color: white;
 }
-#defeated-overlay { display: none; } /* Use JS to show */
-#defeated-overlay.active { display: flex; }
-.defeated-content { text-align: center; color: white; }
 .defeated-content h1 { font-size: 2.5rem; }
 
 /* Spinner */
