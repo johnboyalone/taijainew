@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         body: document.getElementById('chat-modal-body'),
         messagesContainer: document.getElementById('chat-messages'),
         closeBtn: document.getElementById('chat-close-btn'),
-        floatingContainer: document.getElementById('floating-chat-container')
+        marqueeContainer: document.getElementById('chat-marquee-container')
     };
     const summaryElements = {
         winner: document.getElementById('summary-winner'),
@@ -187,7 +187,11 @@ document.addEventListener('DOMContentLoaded', () => {
             updateChat(roomData.chat);
 
             const myPlayer = roomData.players[currentPlayerId];
-            if (myPlayer) {
+            
+            // ซ่อนหน้าจอ "ถูกกำจัด" เมื่อเกมจบแล้ว
+            if (roomData.status === 'finished') {
+                defeatedOverlay.style.display = 'none';
+            } else if (myPlayer) {
                 defeatedOverlay.style.display = myPlayer.status === 'defeated' ? 'flex' : 'none';
             }
 
@@ -443,8 +447,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const messages = Object.values(chatData).sort((a, b) => a.timestamp - b.timestamp);
         const lastMessage = messages[messages.length - 1];
 
-        if (lastMessage && lastMessage.senderId !== currentPlayerId && (Date.now() - lastMessage.timestamp < 4000)) {
-            showFloatingChatMessage(lastMessage);
+        if (lastMessage && lastMessage.senderId !== currentPlayerId && (Date.now() - lastMessage.timestamp < 7000)) {
+            showChatMarquee(lastMessage);
         }
         if (!isChatOpen && lastMessage) {
             chatElements.unreadIndicator.style.display = 'block';
@@ -463,12 +467,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function showFloatingChatMessage(msg) {
-        const bubble = document.createElement('div');
-        bubble.className = 'floating-chat-bubble';
-        bubble.textContent = `${msg.senderName}: ${msg.text}`;
-        chatElements.floatingContainer.appendChild(bubble);
-        setTimeout(() => bubble.remove(), 4000);
+    function showChatMarquee(msg) {
+        const marquee = document.createElement('div');
+        marquee.className = 'chat-marquee-item';
+        marquee.textContent = `${msg.senderName}: ${msg.text}`;
+        chatElements.marqueeContainer.appendChild(marquee);
+        setTimeout(() => marquee.remove(), 7000); // ลบตัวเองออกเมื่อ animation จบ
     }
 
     // --- End Game Logic ---
