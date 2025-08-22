@@ -184,14 +184,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(() => joinRoom(currentRoomId, roomName));
     }
 
-    function joinRoom(roomId, roomName) {
+        function joinRoom(roomId, roomName) {
         playSound(sounds.click);
         currentRoomId = roomId;
         roomRef = database.ref(`rooms/${currentRoomId}`);
+        
+        // แก้ไขตรงนี้: แสดงหน้าเกมก่อน แล้วค่อยทำอย่างอื่น
+        navigateTo('game'); 
+
         roomRef.child('players').once('value', snapshot => {
             roomRef.child('config').once('value', configSnapshot => {
                 const config = configSnapshot.val();
-                if (snapshot.numChildren() >= config.maxPlayers) { alert('ขออภัย, ห้องนี้เต็มแล้ว'); return; }
+                if (snapshot.numChildren() >= config.maxPlayers) {
+                    alert('ขออภัย, ห้องนี้เต็มแล้ว');
+                    navigateTo('lobbyJoin'); // กลับไปหน้าเลือกห้องถ้าเต็ม
+                    return;
+                }
                 playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
                 playerRef.set({
                     name: playerName,
@@ -202,8 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 playerRef.onDisconnect().remove();
                 recentGuesses = [];
-                listenToRoomUpdates();
-                navigateTo('game');
+                listenToRoomUpdates(); // <--- เรียก listener หลังจากทุกอย่างพร้อม
             });
         });
     }
@@ -399,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updates[`/players/${targetPlayerId}/hp`] = 0;
                     updates[`/players/${currentPlayerId}/stats/assassinateSuccess`] = (players[currentPlayerId].stats.assassinateSuccess || 0) + 1;
                     updates[`/players/${targetPlayerId}/stats/damageTaken`] = (players[targetPlayerId].stats.damageTaken || 0) + 3; // โดนตุย = 3 damage
-                    
+
                     const isFirstKill = !Object.values(players).some(p => p.stats.firstBlood);
                     if (isFirstKill) {
                         updates[`/players/${currentPlayerId}/stats/firstBlood`] = true;
@@ -504,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePlayerList(roomData) {
         const { players } = roomData;
         const listsToUpdate = [gameElements.playerList, gameElements.playerListSetup];
-        
+
         listsToUpdate.forEach(list => {
             if (list) list.innerHTML = '';
         });
@@ -521,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const readyStatus = roomData.status === 'waiting' ? (player.isReady ? `<span style="color:var(--text-dark);">พร้อม</span>` : `<span style="opacity:0.7;">รอ...</span>`) : hpBar;
 
             item.innerHTML = `<div class="player-info">${player.name}</div>${readyStatus}`;
-            
+
             listsToUpdate.forEach(list => {
                 if (list) list.appendChild(item.cloneNode(true));
             });
@@ -716,7 +723,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return assignedTitles;
     }
-
 
     function showTitleCards(roomData, titles, onComplete) {
         const playerIdsInOrder = Object.keys(titles).sort((a, b) => {
