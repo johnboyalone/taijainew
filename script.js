@@ -15,7 +15,7 @@ const database = firebase.database();
 let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
 let isChatOpen = false;
-let hasInteracted = false; // สำหรับเช็คการเล่นเสียงครั้งแรก
+let hasInteracted = false;
 let isBgmEnabled = true;
 let isSfxEnabled = true;
 
@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
         wrong: new Audio('sounds/wrong-answer.mp3'),
         yourTurn: new Audio('sounds/your-turn.mp3')
     };
-    // ตั้งค่าเสียงพื้นหลัง
     sounds.background.loop = true;
     sounds.background.volume = 0.3;
 
@@ -52,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chat: document.getElementById('chat-input')
     };
     const buttons = {
-        // goToPreLobby is handled separately now
         goToCreate: document.getElementById('btn-go-to-create'),
         goToJoin: document.getElementById('btn-go-to-join'),
         createRoom: document.getElementById('btn-create-room'),
@@ -66,7 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
         playAgain: document.getElementById('btn-play-again')
     };
     const gameElements = {
-        // roomName: document.getElementById('game-room-name'), // No longer in layout
         playerList: document.getElementById('player-list'),
         setupSection: document.getElementById('setup-section'),
         waitingSection: document.getElementById('waiting-section'),
@@ -78,23 +75,9 @@ document.addEventListener('DOMContentLoaded', () => {
         turn: document.getElementById('turn-indicator'),
         mySecretNumber: document.querySelector('#my-secret-number-display span')
     };
-    const historyElements = {
-        toggleBtn: document.getElementById('history-toggle-btn'),
-        overlay: document.getElementById('history-modal-overlay'),
-        body: document.getElementById('history-modal-body'),
-        closeBtn: document.getElementById('history-close-btn')
-    };
-    const chatElements = {
-        toggleBtn: document.getElementById('chat-toggle-btn'),
-        unreadIndicator: document.getElementById('chat-unread-indicator'),
-        overlay: document.getElementById('chat-modal-overlay'),
-        body: document.getElementById('chat-modal-body'),
-        messagesContainer: document.getElementById('chat-messages'),
-        closeBtn: document.getElementById('chat-close-btn')
-    };
+    // Modals are handled in Event Listeners section
     const settingsElements = {
         openBtnHome: document.getElementById('btn-open-settings-home'),
-        openBtnGame: document.getElementById('btn-open-settings-game'),
         overlay: document.getElementById('settings-modal-overlay'),
         closeBtn: document.getElementById('settings-close-btn'),
         toggleBgm: document.getElementById('toggle-bgm'),
@@ -105,27 +88,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Sound Control ---
     function playSound(sound, isBgm = false) {
         if (!hasInteracted) return;
-        
         const canPlay = isBgm ? isBgmEnabled : isSfxEnabled;
         if (!canPlay) return;
-
         sound.currentTime = 0;
-        sound.play().catch(e => console.log("ไม่สามารถเล่นเสียงได้:", e));
+        sound.play().catch(e => console.log("Sound play failed:", e));
     }
 
     function updateSoundSettings() {
-        // Load settings from localStorage
         isBgmEnabled = localStorage.getItem('isBgmEnabled') !== 'false';
         isSfxEnabled = localStorage.getItem('isSfxEnabled') !== 'false';
-
-        // Update UI toggles
         settingsElements.toggleBgm.checked = isBgmEnabled;
         settingsElements.toggleSfx.checked = isSfxEnabled;
-
-        // Apply settings
-        if (isBgmEnabled && hasInteracted) {
-            sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
-        } else {
+        if (isBgmEnabled && hasInteracted && sounds.background.paused) {
+            sounds.background.play().catch(e => console.log("BGM play failed:", e));
+        } else if (!isBgmEnabled) {
             sounds.background.pause();
         }
     }
@@ -134,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function navigateTo(pageName) {
         Object.values(pages).forEach(p => p.style.display = 'none');
         if (pages[pageName]) {
-            pages[pageName].style.display = 'flex'; // Use flex for all pages now
+            pages[pageName].style.display = 'flex';
         }
     }
 
@@ -143,9 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         if (!hasInteracted) {
             hasInteracted = true;
-            if (isBgmEnabled) {
-                sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
-            }
+            updateSoundSettings();
         }
         const name = inputs.playerName.value.trim();
         if (!name) { alert('กรุณากรอกชื่อ'); return; }
@@ -191,7 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
                 playerRef.set({ name: playerName, isReady: false, hp: 3, status: 'playing', stats: { guesses: 0, assassinateFails: 0, timeOuts: 0 } });
                 playerRef.onDisconnect().remove();
-                // document.getElementById('game-room-name').textContent = `ห้อง: ${roomName}`; // No longer in layout
                 listenToRoomUpdates();
                 navigateTo('game');
             });
@@ -203,19 +176,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const roomListContainer = document.getElementById('room-list-container');
             roomListContainer.innerHTML = '';
             const rooms = snapshot.val();
+            let hasRooms = false;
             if (rooms) {
                 Object.entries(rooms).forEach(([id, room]) => {
                     const playerCount = Object.keys(room.players || {}).length;
                     if (room.status === 'waiting' && playerCount < room.config.maxPlayers) {
-                        const item = document.createElement('div');
-                        item.className = 'room-item'; // You might need to style this for the new theme
+                        hasRooms = true;
+                        const item = document.createElement('button');
+                        item.className = 'room-item';
                         item.textContent = `${room.name} (${playerCount}/${room.config.maxPlayers}) - ${room.config.digitCount} หลัก`;
                         item.onclick = () => joinRoom(id, room.name);
                         roomListContainer.appendChild(item);
                     }
                 });
             }
-            if (roomListContainer.innerHTML === '') {
+            if (!hasRooms) {
                 roomListContainer.innerHTML = '<p>ยังไม่มีห้องว่างในขณะนี้</p>';
             }
         });
@@ -233,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const roomData = snapshot.val();
             updatePlayerList(roomData);
-            // updateChat(roomData.chat); // This function will be in Part 2
+            // updateChat is in part 2
 
             const myPlayer = roomData.players ? roomData.players[currentPlayerId] : null;
 
@@ -244,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (roomData.status === 'waiting') {
-                gameElements.setupSection.style.display = 'block'; // Simplified view logic
+                gameElements.setupSection.style.display = 'block';
                 gameElements.waitingSection.style.display = 'none';
                 gameElements.gameplaySection.style.display = 'none';
                 checkIfGameCanStart(roomData);
@@ -261,11 +236,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         winnerName: winner ? winner.name : "ไม่มีผู้ชนะ"
                     });
                 } else {
-                    updateGameUI(roomData); // This function will be in Part 2
+                    updateGameUI(roomData); // in part 2
                 }
             } else if (roomData.status === 'finished' && !roomData.summaryShown) {
                 roomRef.update({ summaryShown: true });
-                endGame(roomData); // This function will be in Part 2
+                endGame(roomData); // in part 2
             }
         });
     }
@@ -481,7 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const { players, status, playerOrder, targetPlayerIndex, attackerTurnIndex } = roomData;
         const playerListEl = gameElements.playerList;
         
-        // Clear old players but keep the animation container
         Array.from(playerListEl.getElementsByClassName('player-item')).forEach(el => el.remove());
 
         if (!players) return;
@@ -558,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
-            if (currentInput.length === 0 || gameElements.gameDisplay.textContent === '----') {
+            if (gameElements.gameDisplay.textContent === '----') {
                 currentInput = '';
             }
             if (currentInput.length < digitCount) {
@@ -588,7 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
     buttons.delete.addEventListener('click', handleDelete);
     buttons.guess.addEventListener('click', () => handleAction(false));
     buttons.assassinate.addEventListener('click', () => handleAction(true));
-    buttons.chatSend.addEventListener('click', handleSendChat);
+    buttons.chatSend.addEventListener('click', () => {/* handleSendChat() will be here */});
     buttons.backToHome.addEventListener('click', () => {
         playSound(sounds.click);
         sounds.background.pause();
@@ -597,14 +571,13 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('home');
     });
     buttons.playAgain.addEventListener('click', () => { playSound(sounds.click); navigateTo('preLobby'); });
-    inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
+    inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') {/* handleSendChat() will be here */} });
     gameElements.keypad.addEventListener('click', handleKeypadClick);
 
     // Settings Listeners
     const openSettings = () => { playSound(sounds.click); settingsElements.overlay.style.display = 'flex'; };
     const closeSettings = () => { playSound(sounds.click); settingsElements.overlay.style.display = 'none'; };
     settingsElements.openBtnHome.addEventListener('click', openSettings);
-    // settingsElements.openBtnGame.addEventListener('click', openSettings); // No longer in layout
     settingsElements.closeBtn.addEventListener('click', closeSettings);
     settingsElements.overlay.addEventListener('click', (e) => { if (e.target === settingsElements.overlay) closeSettings(); });
     settingsElements.toggleBgm.addEventListener('change', (e) => {
