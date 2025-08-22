@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
     let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
     let isChatOpen = false;
-    let hasShownSummary = false; // Flag to prevent re-showing summary
+    let hasShownSummary = false;
 
     // --- Firebase Config ---
     const firebaseConfig = {
@@ -179,15 +179,13 @@ document.addEventListener('DOMContentLoaded', () => {
         currentRoomId = roomId;
         roomRef = database.ref(`rooms/${currentRoomId}`);
         
-        navigateTo('game'); 
-        hasShownSummary = false; // Reset summary flag
+        hasShownSummary = false;
 
         roomRef.child('players').once('value', snapshot => {
             roomRef.child('config').once('value', configSnapshot => {
                 const config = configSnapshot.val();
-                if (snapshot.numChildren() >= config.maxPlayers) {
+                if (snapshot.numChildren() >= config.maxPlayers && !snapshot.hasChild(currentPlayerId)) {
                     alert('ขออภัย, ห้องนี้เต็มแล้ว');
-                    navigateTo('lobbyJoin');
                     return;
                 }
                 playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
@@ -199,6 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     stats: { guesses: 0, correctGuesses: 0, assassinateSuccess: 0, assassinateFails: 0, timeOuts: 0, damageTaken: 0, firstBlood: false }
                 });
                 playerRef.onDisconnect().remove();
+                navigateTo('game');
                 listenToRoomUpdates();
             });
         });
@@ -243,35 +242,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const roomData = snapshot.val();
+            const myPlayer = roomData.players?.[currentPlayerId];
+
+            if (roomData.status === 'finished') {
+                if (turnTimer) clearInterval(turnTimer);
+                if (!hasShownSummary) {
+                    hasShownSummary = true;
+                    navigateTo('summary'); 
+                    showTitleCards(roomData, roomData.titles, () => {
+                        showSummaryPage(roomData, roomData.titles);
+                    });
+                }
+                return; 
+            }
+
             updatePlayerList(roomData);
             updateChat(roomData.chat);
             updateHistory(roomData.guessHistory);
 
-            const myPlayer = roomData.players?.[currentPlayerId];
-            if (!myPlayer && roomData.status !== 'finished') {
-                return;
-            }
+            if (!myPlayer) return;
 
-            defeatedOverlay.style.display = myPlayer?.status === 'defeated' ? 'flex' : 'none';
+            defeatedOverlay.style.display = myPlayer.status === 'defeated' ? 'flex' : 'none';
 
             if (roomData.status === 'waiting') {
                 gameElements.setupSection.style.display = 'flex';
                 gameElements.gameplaySection.style.display = 'none';
                 gameElements.turnIndicator.textContent = `กำลังรอผู้เล่น... (${Object.keys(roomData.players).length}/${roomData.config.maxPlayers})`;
-                buttons.readyUp.disabled = myPlayer?.isReady || false;
+                buttons.readyUp.disabled = myPlayer.isReady || false;
                 checkIfGameCanStart(roomData);
             } else if (roomData.status === 'playing') {
                 updateGameUI(roomData);
-            } else if (roomData.status === 'finished') {
-                if (turnTimer) clearInterval(turnTimer);
-                // *** CRITICAL FIX FOR RACE CONDITION ***
-                // Only proceed if the final data (titles) is present and we haven't shown the summary yet.
-                if (roomData.titles && !hasShownSummary) {
-                    hasShownSummary = true; // Set flag immediately to prevent re-triggering
-                    showTitleCards(roomData, roomData.titles, () => {
-                        showSummaryPage(roomData, roomData.titles);
-                    });
-                }
             }
         });
     }
@@ -296,7 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
             turnStartTime: firebase.database.ServerValue.TIMESTAMP
         });
     }
-
     function updateGameUI(roomData) {
         gameElements.setupSection.style.display = 'none';
         gameElements.gameplaySection.style.display = 'flex';
@@ -318,9 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetPlayer = players[targetPlayerId];
 
         const attackers = activePlayers.filter(id => id !== targetPlayerId);
-        if (attackers.length === 0) { 
-            return; 
-        }
+        if (attackers.length === 0) return;
 
         const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
         const attackerPlayerId = attackers[currentAttackerIndexInAttackers];
@@ -344,7 +341,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el.dataset.playerId === targetPlayerId) el.classList.add('is-target');
         });
         
-        playAttackAnimation(attackerPlayerId, targetPlayerId);
+        requestAnimationFrame(() => {
+            playAttackAnimation(attackerPlayerId, targetPlayerId);
+        });
 
         gameElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
         buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
@@ -360,6 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 100);
     }
+
     function handleAction(isAssassination) {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
@@ -411,9 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (myHp <= 0) updates[`/players/${currentPlayerId}/status`] = 'defeated';
                 }
             } else {
-                // *** CRITICAL BUG FIX ***
-                // A correct non-assassination guess should NOT defeat the player.
-                // It only logs the result. The player must use the "Assassinate" button to win.
                 if (isCorrect) {
                     playSound(sounds.correct);
                     statsUpdate.correctGuesses = (statsUpdate.correctGuesses || 0) + 1;
@@ -529,7 +526,6 @@ document.addEventListener('DOMContentLoaded', () => {
             playerListContainer.appendChild(item);
         });
     }
-
     function playAttackAnimation(attackerId, targetId) {
         const attackerEl = document.querySelector(`.player-item[data-player-id="${attackerId}"]`);
         const targetEl = document.querySelector(`.player-item[data-player-id="${targetId}"]`);
@@ -554,13 +550,13 @@ document.addEventListener('DOMContentLoaded', () => {
         gameElements.attackAnimationContainer.appendChild(arrow);
 
         requestAnimationFrame(() => {
-            arrow.style.transition = 'transform 1s ease-out, opacity 1s ease-out';
+            arrow.style.transition = 'transform 0.8s ease-out, opacity 0.8s ease-out';
             arrow.style.transform = `translate(${endX - startX}px, ${endY - startY}px) scale(1.5)`;
         });
 
         setTimeout(() => {
             arrow.remove();
-        }, 1000);
+        }, 800);
     }
 
     function updateHistory(historyData) {
@@ -649,7 +645,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const titles = assignTitles(roomData);
         
-        // This is the final, single update that concludes the game.
         roomRef.update({
             status: 'finished',
             winnerName: winnerName,
@@ -744,7 +739,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             summaryElements.playerList.appendChild(item);
         });
-        navigateTo('summary');
     }
 
     function leaveRoom(isDisconnected = false) {
@@ -868,6 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
     });
 
+    // --- Initial Load ---
     const savedPlayerName = sessionStorage.getItem('playerName');
     if (savedPlayerName) {
         inputs.playerName.value = savedPlayerName;
