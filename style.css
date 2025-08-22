@@ -245,7 +245,7 @@ input[type="text"], select {
     margin-top: 15px;
 }
 
-/* --- Modals (History, Chat & Settings) --- */
+/* --- Modals (History & Chat) --- */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0;
@@ -307,3 +307,192 @@ input[type="text"], select {
 /* Chat Modal */
 #chat-modal-body {
     flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse; /* Newest messages at the bottom */
+}
+#chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 5px;
+}
+.chat-message {
+    padding: 8px 12px;
+    border-radius: 15px;
+    max-width: 75%;
+    word-wrap: break-word;
+}
+.chat-message.mine {
+    background-color: var(--primary-color);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 5px;
+}
+.chat-message.theirs {
+    background-color: #e9ecef;
+    align-self: flex-start;
+    border-bottom-left-radius: 5px;
+}
+.chat-message .sender {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 3px;
+    opacity: 0.8;
+}
+.chat-input-area {
+    display: flex;
+    margin-top: 15px;
+    gap: 10px;
+}
+#chat-input {
+    flex-grow: 1;
+    margin: 0;
+}
+#chat-send-btn {
+    padding: 10px 15px;
+    border: none;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+#chat-unread-indicator {
+    position: absolute;
+    top: 5px; right: 5px;
+    width: 10px; height: 10px;
+    background-color: var(--danger-color);
+    border-radius: 50%;
+    border: 2px solid white;
+}
+
+/* Chat Marquee (ข้อความวิ่งกลางจอ) */
+#chat-marquee-container {
+    position: fixed; /* เปลี่ยนเป็น fixed เพื่อให้อยู่กลางจอเสมอ */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* จัดให้อยู่กึ่งกลางเป๊ะๆ */
+    width: 100%; /* ทำให้ container กว้างเต็มจอ */
+    max-width: 600px; /* แต่ไม่กว้างเกินไปบนจอใหญ่ */
+    height: 40px; /* เพิ่มความสูงเล็กน้อย */
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1100;
+}
+
+.chat-marquee-item {
+    position: absolute;
+    white-space: nowrap;
+    background-color: rgba(0, 0, 0, 0.8); /* ทำให้เข้มขึ้นเล็กน้อย */
+    color: white;
+    padding: 8px 20px; /* เพิ่ม padding ให้ดูใหญ่ขึ้น */
+    border-radius: 20px;
+    font-size: 1.1rem; /* เพิ่มขนาดฟอนต์ */
+    font-weight: 600;
+    animation: marquee-center 6s linear forwards; /* เรียกใช้ animation ใหม่ */
+}
+
+/* Keyframe ใหม่สำหรับวิ่งจากขวาไปซ้ายผ่านกลางจอ */
+@keyframes marquee-center {
+    0% {
+        /* เริ่มจากนอกจอฝั่งขวา */
+        transform: translateX(150%);
+        opacity: 1;
+    }
+    100% {
+        /* วิ่งไปจนสุดจอด้านซ้าย */
+        transform: translateX(-150%);
+        opacity: 1;
+    }
+}
+
+
+/* --- Defeated & Summary --- */
+#defeated-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.85);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999; /* Below modals */
+}
+#page-summary #summary-winner {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--success-color);
+    margin-bottom: 20px;
+}
+#summary-player-list .player-item {
+    font-size: 1rem;
+}
+.player-title {
+    font-size: 0.8rem;
+    color: var(--secondary-color);
+    font-style: italic;
+}
+
+/* --- Title Cards --- */
+#title-card-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none; 
+}
+#title-card {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    width: 80%;
+    max-width: 350px;
+    transform: scale(0.7);
+    transition: transform 0.5s;
+}
+#title-card-overlay.visible {
+    opacity: 1;
+    pointer-events: auto; 
+}
+#title-card-overlay.visible #title-card {
+    transform: scale(1);
+}
+#title-card-emoji {
+    font-size: 4rem;
+    margin-bottom: 10px;
+}
+#title-card-name {
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+}
+#title-card-title {
+    font-size: 1.3rem;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+#title-card-desc {
+    font-size: 1rem;
+    color: var(--secondary-color);
+}
+
+/* Spinner */
+.spinner {
+    border: 4px solid rgba(0,0,0,0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: var(--primary-color);
+    animation: spin 1s ease infinite;
+    margin: 20px auto;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

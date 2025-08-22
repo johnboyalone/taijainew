@@ -85,13 +85,12 @@
         <div class="game-header">
             <h2 id="game-room-name">ห้อง: ...</h2>
             <div class="game-header-buttons">
+                <!-- เปลี่ยนเป็น Marquee Container -->
                 <div id="chat-marquee-container"></div>
                 <button id="history-toggle-btn" class="btn-icon">📜</button>
                 <button id="chat-toggle-btn" class="btn-icon">
                     💬<span id="chat-unread-indicator" style="display: none;"></span>
                 </button>
-                <!-- ปุ่มตั้งค่าเสียงที่เพิ่มเข้ามา -->
-                <button id="settings-toggle-btn" class="btn-icon">⚙️</button>
             </div>
         </div>
 
@@ -158,39 +157,6 @@
             <div class="chat-input-area">
                 <input type="text" id="chat-input" placeholder="พิมพ์ข้อความ...">
                 <button id="chat-send-btn">ส่ง</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pop-up ตั้งค่าเสียงที่เพิ่มเข้ามา -->
-    <div id="settings-modal-overlay" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>ตั้งค่าเสียง</h3>
-                <button id="settings-close-btn" class="close-btn">&times;</button>
-            </div>
-            <div id="settings-modal-body">
-                <div class="setting-item">
-                    <label for="toggle-bgm">เพลงพื้นหลัง</label>
-                    <label class="switch">
-                        <input type="checkbox" id="toggle-bgm" checked>
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label for="toggle-sfx">เอฟเฟกต์ (SFX)</label>
-                    <label class="switch">
-                        <input type="checkbox" id="toggle-sfx" checked>
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label for="toggle-your-turn">เสียงแจ้งเตือน "ตาของคุณ"</label>
-                    <label class="switch">
-                        <input type="checkbox" id="toggle-your-turn" checked>
-                        <span class="slider round"></span>
-                    </label>
-                </div>
             </div>
         </div>
     </div>
