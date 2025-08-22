@@ -74,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
         goToJoin: document.getElementById('btn-go-to-join'),
         createRoom: document.getElementById('btn-create-room'),
         leaveRoom: document.getElementById('btn-leave-room'),
-        leaveRoomSetup: document.getElementById('btn-leave-room-setup'),
         readyUp: document.getElementById('btn-ready-up'),
         delete: document.getElementById('btn-delete'),
         guess: document.getElementById('btn-guess'),
@@ -110,9 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(pages).forEach(p => p.style.display = 'none');
         if (pages[pageName]) {
             pages[pageName].style.display = 'block';
-            if (pageName === 'game') {
-                pages[pageName].style.display = 'flex';
-            }
         }
     }
 
@@ -286,48 +282,18 @@ document.addEventListener('DOMContentLoaded', () => {
             turnStartTime: firebase.database.ServerValue.TIMESTAMP
         });
     }
-    function animateAttack(attackerId, targetId) {
-        const container = document.getElementById('attack-animation-container');
-        const attackerEl = document.getElementById(`player-${attackerId}`);
-        const targetEl = document.getElementById(`player-${targetId}`);
-        container.innerHTML = '';
-
-        if (!attackerEl || !targetEl) return;
-
-        const attackerRect = attackerEl.getBoundingClientRect();
-        const targetRect = targetEl.getBoundingClientRect();
-        const containerRect = container.parentElement.getBoundingClientRect();
-
-        const startX = attackerRect.left + attackerRect.width / 2 - containerRect.left;
-        const startY = attackerRect.top + attackerRect.height / 2 - containerRect.top;
-        const endX = targetRect.left + targetRect.width / 2 - containerRect.left;
-        const endY = targetRect.top + targetRect.height / 2 - containerRect.top;
-
-        const controlX = (startX + endX) / 2;
-        const controlY = (startY + endY) / 2 - (Math.abs(startY - endY) < 50 ? 50 : 0);
-        const pathD = `M${startX},${startY} Q${controlX},${controlY} ${endX},${endY}`;
-
-        for (let i = 0; i < 5; i++) {
-            const arrow = document.createElement('div');
-            arrow.className = 'attack-arrow';
-            arrow.textContent = '>';
-            arrow.style.offsetPath = `path("${pathD}")`;
-            arrow.style.animationDelay = `${i * 0.2}s`;
-            container.appendChild(arrow);
-        }
-    }
-
     function updateGameUI(roomData) {
         if (turnTimer) clearInterval(turnTimer);
 
         const { playerOrder, players, targetPlayerIndex, attackerTurnIndex, config, turnStartTime } = roomData;
+        const myPlayer = players[currentPlayerId];
 
-        if (players[currentPlayerId] && players[currentPlayerId].secretNumber) {
-            gameElements.mySecretNumber.textContent = players[currentPlayerId].secretNumber;
+        if (myPlayer && myPlayer.secretNumber) {
+            gameElements.mySecretNumber.textContent = myPlayer.secretNumber;
         }
 
         const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-        if (activePlayers.length <= 1) return;
+        if (activePlayers.length === 0) return;
 
         const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
         const targetPlayerId = activePlayers[currentTargetIndexInActive];
@@ -335,35 +301,48 @@ document.addEventListener('DOMContentLoaded', () => {
         gameElements.target.textContent = `เป้าหมาย: ${targetPlayerName}`;
 
         const attackers = activePlayers.filter(id => id !== targetPlayerId);
-        if (attackers.length === 0) return;
+        if (attackers.length === 0) {
+             // This case should lead to game end, but as a fallback:
+            gameElements.turn.textContent = "รอผู้เล่นคนต่อไป";
+            return;
+        }
 
         const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
         const attackerPlayerId = attackers[currentAttackerIndexInAttackers];
         const attackerPlayerName = players[attackerPlayerId].name;
-        gameElements.turn.textContent = `${attackerPlayerName} กำลังทาย`;
-
-        setTimeout(() => animateAttack(attackerPlayerId, targetPlayerId), 100);
 
         const isMyTurn = attackerPlayerId === currentPlayerId;
-        const amIDefeated = players[currentPlayerId]?.status === 'defeated';
-        gameElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
-        buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
+        const amITarget = targetPlayerId === currentPlayerId;
+        const amIDefeated = myPlayer?.status === 'defeated';
 
-        if (isMyTurn) {
-            gameElements.turn.textContent = "ถึงตาคุณแล้ว!";
+        // Update Turn Indicator Text
+        if (amITarget) {
+            gameElements.turn.textContent = `คุณคือเป้าหมาย!`;
+        } else if (isMyTurn) {
+            gameElements.turn.textContent = `ถึงตาคุณแล้ว!`;
             playSound(sounds.yourTurn);
-        }
-        if (targetPlayerId === currentPlayerId) {
-            gameElements.target.textContent = `คุณคือเป้าหมาย!`;
+        } else {
+            gameElements.turn.textContent = `${attackerPlayerName} กำลังทาย`;
         }
 
+        // Enable/Disable UI based on turn
+        gameElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
+        buttons.assassinate.style.display = (isMyTurn && !amIDefeated) ? 'block' : 'none';
+
+        // Update player item borders
+        document.querySelectorAll('.player-item').forEach(item => {
+            item.classList.remove('attacker', 'target');
+            if (item.dataset.playerId === attackerPlayerId) item.classList.add('attacker');
+            if (item.dataset.playerId === targetPlayerId) item.classList.add('target');
+        });
+
+        // Timer Logic
+        const timerStartTime = turnStartTime || Date.now();
         turnTimer = setInterval(() => {
-            const elapsed = (Date.now() - turnStartTime) / 1000;
-            const remaining = Math.max(0, config.turnTime - elapsed);
-            const percentage = (remaining / config.turnTime) * 100;
-            gameElements.timerBar.style.width = `${percentage}%`;
-
-            if (remaining <= 0) {
+            const elapsed = (Date.now() - timerStartTime) / 1000;
+            const remainingRatio = Math.max(0, (config.turnTime - elapsed) / config.turnTime);
+            gameElements.timerBar.style.width = `${remainingRatio * 100}%`;
+            if (remainingRatio <= 0) {
                 clearInterval(turnTimer);
                 if (isMyTurn) handleTimeOut(attackerPlayerId);
             }
@@ -375,8 +354,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleAction(isAssassination) {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
-            if (currentInput.length !== roomData.config.digitCount) { alert(`ต้องใส่เลข ${roomData.config.digitCount} หลัก`); return; }
-
+            if (currentInput.length !== roomData.config.digitCount) {
+                alert(`ต้องใส่เลข ${roomData.config.digitCount} หลัก`);
+                return;
+            }
             playSound(sounds.click);
 
             const { playerOrder, players, targetPlayerIndex, config } = roomData;
@@ -389,13 +370,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const isCorrect = bulls === config.digitCount;
 
             let updates = {};
-            updates[`/players/${currentPlayerId}/lastGuess`] = { guess: currentInput, timestamp: firebase.database.ServerValue.TIMESTAMP };
-            updates[`/guessHistory/${database.ref().push().key}`] = { attackerId: currentPlayerId, targetId: targetPlayerId, guess: currentInput, bulls, cows, isAssassination, timestamp: firebase.database.ServerValue.TIMESTAMP };
+            updates[`/guessHistory/${database.ref().push().key}`] = {
+                attackerId: currentPlayerId,
+                targetId: targetPlayerId,
+                guess: currentInput,
+                bulls,
+                cows,
+                isAssassination,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
             updates[`/players/${currentPlayerId}/stats/guesses`] = (players[currentPlayerId].stats.guesses || 0) + 1;
 
             if (isAssassination) {
                 if (isCorrect) {
-                    playSound(sounds.win);
                     updates[`/players/${targetPlayerId}/status`] = 'defeated';
                     updates[`/players/${targetPlayerId}/hp`] = 0;
                 } else {
@@ -407,7 +394,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 if (isCorrect) {
-                    playSound(sounds.win);
                     updates[`/players/${targetPlayerId}/status`] = 'defeated';
                     updates[`/players/${targetPlayerId}/hp`] = 0;
                 }
@@ -446,13 +432,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const currentTargetId = activePlayers[targetPlayerIndex % activePlayers.length];
             const attackers = activePlayers.filter(id => id !== currentTargetId);
+            if (attackers.length === 0) return;
 
             const nextAttackerIndex = (attackerTurnIndex + 1);
             if (nextAttackerIndex >= attackers.length) {
-                const nextTargetPlayerIndex = (targetPlayerIndex + 1) % activePlayers.length;
-                roomRef.update({ targetPlayerIndex: nextTargetPlayerIndex, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+                roomRef.update({
+                    targetPlayerIndex: (targetPlayerIndex + 1),
+                    attackerTurnIndex: 0,
+                    turnStartTime: firebase.database.ServerValue.TIMESTAMP
+                });
             } else {
-                roomRef.update({ attackerTurnIndex: nextAttackerIndex, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+                roomRef.update({
+                    attackerTurnIndex: nextAttackerIndex,
+                    turnStartTime: firebase.database.ServerValue.TIMESTAMP
+                });
             }
         });
     }
@@ -461,71 +454,50 @@ document.addEventListener('DOMContentLoaded', () => {
         let bulls = 0, cows = 0;
         const secretChars = secret.split('');
         const guessChars = guess.split('');
-        for (let i = guessChars.length - 1; i >= 0; i--) {
-            if (guessChars[i] === secretChars[i]) {
+        const secretCounts = {};
+        const guessCounts = {};
+
+        for (let i = 0; i < secret.length; i++) {
+            if (secretChars[i] === guessChars[i]) {
                 bulls++;
-                secretChars.splice(i, 1);
-                guessChars.splice(i, 1);
+            } else {
+                secretCounts[secretChars[i]] = (secretCounts[secretChars[i]] || 0) + 1;
+                guessCounts[guessChars[i]] = (guessCounts[guessChars[i]] || 0) + 1;
             }
         }
-        const secretCounts = {};
-        secretChars.forEach(c => secretCounts[c] = (secretCounts[c] || 0) + 1);
-        guessChars.forEach(c => {
-            if (secretCounts[c] > 0) {
-                cows++;
-                secretCounts[c]--;
+        for (const key in guessCounts) {
+            if (secretCounts[key]) {
+                cows += Math.min(guessCounts[key], secretCounts[key]);
             }
-        });
+        }
         return { bulls, cows };
     }
 
+    // --- UI Updates ---
     function updatePlayerList(roomData) {
-        const { players, status, playerOrder, targetPlayerIndex, attackerTurnIndex } = roomData;
-        
-        const listsToUpdate = [];
-        if (status === 'waiting') {
-            listsToUpdate.push(gameElements.playerListWaiting, gameElements.playerListWaiting2);
-        } else if (status === 'playing') {
-            listsToUpdate.push(gameElements.playerList);
-        }
+        const listsToUpdate = [
+            gameElements.playerList,
+            gameElements.playerListWaiting,
+            gameElements.playerListWaiting2
+        ];
+        listsToUpdate.forEach(list => { if(list) list.innerHTML = ''; });
 
-        listsToUpdate.forEach(list => {
-            if (list) list.innerHTML = '';
-        });
-
+        const { players, status } = roomData;
         if (!players) return;
 
-        let attackerPlayerId = null;
-        let targetPlayerId = null;
+        const playerOrder = roomData.playerOrder || Object.keys(players);
 
-        if (status === 'playing' && playerOrder) {
-            const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-            if (activePlayers.length > 1) {
-                const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
-                targetPlayerId = activePlayers[currentTargetIndexInActive];
-                const attackers = activePlayers.filter(id => id !== targetPlayerId);
-                if (attackers.length > 0) {
-                    attackerPlayerId = attackers[attackerTurnIndex % attackers.length];
-                }
-            }
-        }
-
-        const playerIdsToRender = playerOrder || Object.keys(players);
-        
-        playerIdsToRender.forEach(id => {
+        playerOrder.forEach(id => {
             const player = players[id];
             if (!player) return;
 
             const item = document.createElement('div');
             item.className = 'player-item';
-            item.id = `player-${id}`;
-
+            item.dataset.playerId = id;
             if (player.status === 'defeated') item.classList.add('player-defeated');
-            if (id === attackerPlayerId) item.classList.add('attacker');
-            if (id === targetPlayerId) item.classList.add('target');
 
             const hpBar = `<div class="hp-bar">${[...Array(3)].map((_, i) => `<div class="hp-point ${i < player.hp ? '' : 'lost'}"></div>`).join('')}</div>`;
-            const readyStatus = status === 'waiting' ? (player.isReady ? `<span style="color:var(--text-dark);">พร้อม</span>` : `<span style="opacity:0.7;">รอ...</span>`) : hpBar;
+            const readyStatus = (status === 'waiting') ? (player.isReady ? `<span style="color:var(--text-dark);">พร้อม</span>` : `<span style="opacity:0.7;">รอ...</span>`) : hpBar;
 
             item.innerHTML = `<div class="player-info">${player.name}</div>${readyStatus}`;
             
@@ -570,7 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateChat(chatData) {
         const chatMessagesContainer = document.getElementById('chat-messages');
         const chatUnreadIndicator = document.getElementById('chat-unread-indicator');
-        if (!chatData) return;
+        if (!chatData || !chatMessagesContainer) return;
         const messages = Object.values(chatData).sort((a, b) => a.timestamp - b.timestamp);
         const lastMessage = messages[messages.length - 1];
 
@@ -746,7 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
     buttons.goToJoin.addEventListener('click', handleGoToJoin);
     buttons.createRoom.addEventListener('click', createRoom);
     buttons.leaveRoom.addEventListener('click', () => leaveRoom());
-    buttons.leaveRoomSetup.addEventListener('click', () => leaveRoom());
+    document.getElementById('btn-leave-room-setup').addEventListener('click', () => leaveRoom());
     buttons.readyUp.addEventListener('click', handleReadyUp);
     buttons.delete.addEventListener('click', handleDelete);
     buttons.guess.addEventListener('click', () => handleAction(false));
@@ -788,15 +760,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatModalOverlay = document.getElementById('chat-modal-overlay');
     const chatToggleBtn = document.getElementById('chat-toggle-btn');
     const chatCloseBtn = document.getElementById('chat-close-btn');
-    chatToggleBtn.addEventListener('click', () => {
+    const chatSendBtn = document.getElementById('chat-send-btn');
+    const chatInput = document.getElementById('chat-input');
+    
+    const openChat = () => {
         playSound(sounds.click);
         chatModalOverlay.style.display = 'flex';
         document.getElementById('chat-unread-indicator').style.display = 'none';
         isChatOpen = true;
         setTimeout(() => { document.getElementById('chat-modal-body').scrollTop = document.getElementById('chat-modal-body').scrollHeight; }, 0);
-    });
-    chatCloseBtn.addEventListener('click', () => { playSound(sounds.click); chatModalOverlay.style.display = 'none'; isChatOpen = false; });
-    chatModalOverlay.addEventListener('click', (e) => { if (e.target === chatModalOverlay) { chatModalOverlay.style.display = 'none'; isChatOpen = false; } });
+    };
+    const closeChat = () => { playSound(sounds.click); chatModalOverlay.style.display = 'none'; isChatOpen = false; };
+    const sendChat = () => {
+        const message = chatInput.value.trim();
+        if (!message) return;
+        playSound(sounds.click);
+        database.ref(`rooms/${currentRoomId}/chat`).push().set({
+            senderId: currentPlayerId,
+            senderName: playerName,
+            text: message,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+        chatInput.value = '';
+    };
+
+    chatToggleBtn.addEventListener('click', openChat);
+    chatCloseBtn.addEventListener('click', closeChat);
+    chatModalOverlay.addEventListener('click', (e) => { if (e.target === chatModalOverlay) closeChat(); });
+    chatSendBtn.addEventListener('click', sendChat);
+    chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChat(); });
 
     // --- Initial Load ---
     const savedPlayerName = sessionStorage.getItem('playerName');
