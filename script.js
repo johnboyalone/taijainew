@@ -15,7 +15,7 @@ const database = firebase.database();
 let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
 let isChatOpen = false;
-let hasInteracted = false;
+let hasInteracted = false; // สำหรับเช็คการเล่นเสียงครั้งแรก
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -27,11 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
         wrong: new Audio('sounds/wrong-answer.mp3'),
         yourTurn: new Audio('sounds/your-turn.mp3')
     };
+    // ตั้งค่าเสียงพื้นหลัง
     sounds.background.loop = true;
     sounds.background.volume = 0.3;
 
+    // ฟังก์ชันกลางสำหรับเล่นเสียง
     function playSound(sound) {
-        if (!hasInteracted) return;
+        if (!hasInteracted) return; // ถ้าผู้ใช้ยังไม่เคยกดอะไรเลย จะยังไม่เล่นเสียง
         sound.currentTime = 0;
         sound.play().catch(e => console.log("ไม่สามารถเล่นเสียงได้:", e));
     }
@@ -252,8 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startGame(playerIds) {
-        const shuffledPlayerIds = playerIds.sort(() => Math.random() - 0.5);
-        roomRef.update({ status: 'playing', playerOrder: shuffledPlayerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+        roomRef.update({ status: 'playing', playerOrder: playerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
     }
 
     function updateGameUI(roomData) {
@@ -270,44 +271,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-        const targetPlayerId = activePlayers[targetPlayerIndex % activePlayers.length];
+
+        const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
+        const targetPlayerId = activePlayers[currentTargetIndexInActive];
+        const targetPlayerName = players[targetPlayerId].name;
+        gameElements.target.textContent = `เป้าหมาย: ${targetPlayerName}`;
+
         const attackers = activePlayers.filter(id => id !== targetPlayerId);
-        if (attackers.length === 0) { return; }
-        const attackerPlayerId = attackers[attackerTurnIndex % attackers.length];
+        if (attackers.length === 0) { return; } 
 
-        gameElements.target.textContent = `เป้าหมาย: ${players[targetPlayerId].name}`;
-        gameElements.turn.textContent = `ผู้ทาย: ${players[attackerPlayerId].name}`;
-
-        drawArrow(attackerPlayerId, targetPlayerId);
+        const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
+        const attackerPlayerId = attackers[currentAttackerIndexInAttackers];
+        const attackerPlayerName = players[attackerPlayerId].name;
+        gameElements.turn.textContent = `ผู้ทาย: ${attackerPlayerName}`;
 
         const isMyTurn = attackerPlayerId === currentPlayerId;
         const amIDefeated = players[currentPlayerId]?.status === 'defeated';
         gameElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
         buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
 
-        gameElements.turn.style.color = isMyTurn ? 'var(--success-color)' : 'var(--text-secondary)';
+        gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
             playSound(sounds.yourTurn);
         }
-        gameElements.target.style.color = (targetPlayerId === currentPlayerId) ? 'var(--danger-color)' : 'var(--text-secondary)';
-        if (targetPlayerId === currentPlayerId) {
-            gameElements.target.textContent = `คุณคือเป้าหมาย!`;
-        }
+        if (targetPlayerId === currentPlayerId) { gameElements.turn.textContent = `คุณคือเป้าหมาย!`; gameElements.turn.style.color = '#dc3545'; }
 
         gameElements.timer.style.display = 'block';
         turnTimer = setInterval(() => {
             const elapsed = (Date.now() - turnStartTime) / 1000;
             const remaining = Math.max(0, config.turnTime - elapsed);
             gameElements.timer.textContent = Math.ceil(remaining);
-            if (remaining <= 0) {
-                clearInterval(turnTimer);
-                if (isMyTurn) handleTimeOut(attackerPlayerId);
-            }
+            if (remaining <= 0) { clearInterval(turnTimer); if (isMyTurn) handleTimeOut(attackerPlayerId); }
         }, 500);
 
         updatePersonalHistory(roomData);
     }
+
     function handleAction(isAssassination) {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
@@ -317,7 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { playerOrder, players, targetPlayerIndex, config } = roomData;
             const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-            const targetPlayerId = activePlayers[targetPlayerIndex % activePlayers.length];
+            const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
+            const targetPlayerId = activePlayers[currentTargetIndexInActive];
             const targetPlayer = players[targetPlayerId];
 
             const { bulls, cows } = calculateHints(currentInput, targetPlayer.secretNumber);
@@ -351,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
             gameElements.gameDisplay.textContent = '';
         });
     }
-
     function handleTimeOut(timedOutPlayerId) {
         const playerToUpdateRef = database.ref(`rooms/${currentRoomId}/players/${timedOutPlayerId}`);
         playerToUpdateRef.once('value', snapshot => {
@@ -372,9 +372,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
             const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-            if (activePlayers.length <= 1) {
-                roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP });
-                return;
+            if (activePlayers.length <= 1) { 
+                roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP }); 
+                return; 
             }
 
             const currentTargetId = activePlayers[targetPlayerIndex % activePlayers.length];
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const nextAttackerIndex = (attackerTurnIndex + 1);
             if (nextAttackerIndex >= attackers.length) {
-                roomRef.update({ targetPlayerIndex: (targetPlayerIndex + 1) % activePlayers.length, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+                roomRef.update({ targetPlayerIndex: (targetPlayerIndex + 1), attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
             } else {
                 roomRef.update({ attackerTurnIndex: nextAttackerIndex, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
             }
@@ -402,97 +402,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return { bulls, cows };
     }
 
+    // --- UI Updates ---
     function updatePlayerList(roomData) {
-        const { players, status, playerOrder, targetPlayerIndex, attackerTurnIndex } = roomData;
-        const playerListElement = gameElements.playerList;
-        playerListElement.innerHTML = '';
+        const { players } = roomData;
+        gameElements.playerList.innerHTML = '';
         if (!players) return;
-
-        const playerIds = Object.keys(players);
-
-        // Remove previous layout classes and add the base class
-        playerListElement.className = 'player-list-grid'; 
-        if (playerIds.length >= 3) {
-            playerListElement.classList.add('layout-3-cols');
-        } else {
-            playerListElement.classList.add('layout-2-cols');
-        }
-
-        let attackerPlayerId = null;
-        let targetPlayerId = null;
-
-        if (status === 'playing') {
-            const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-            if (activePlayers.length > 1) {
-                targetPlayerId = activePlayers[targetPlayerIndex % activePlayers.length];
-                const attackers = activePlayers.filter(id => id !== targetPlayerId);
-                if (attackers.length > 0) {
-                    attackerPlayerId = attackers[attackerTurnIndex % attackers.length];
-                }
-            }
-        }
-
-        playerIds.forEach(id => {
-            const player = players[id];
+        Object.entries(players).forEach(([id, player]) => {
             const item = document.createElement('div');
             item.className = 'player-item';
-            item.id = `player-item-${id}`;
-
             if (player.status === 'defeated') item.classList.add('player-defeated');
-            if (id === targetPlayerId) item.classList.add('is-target');
-            if (id === attackerPlayerId) item.classList.add('is-attacker');
 
             const hpBar = `<div class="hp-bar">${[...Array(3)].map((_, i) => `<div class="hp-point ${i < player.hp ? '' : 'lost'}"></div>`).join('')}</div>`;
-            const readyStatus = status === 'waiting' ? `<span style="color:var(--text-secondary);">กำลังรอ...</span>` : hpBar;
-            const playerStatusDisplay = player.isReady && status === 'waiting' ? `<span style="color:var(--success-color);">พร้อมแล้ว</span>` : readyStatus;
+            const readyStatus = roomData.status === 'waiting' ? (player.isReady ? `<span style="color:green;">พร้อมแล้ว</span>` : `<span>กำลังรอ...</span>`) : hpBar;
 
-            item.innerHTML = `<div class="player-info">${player.name}</div> ${playerStatusDisplay}`;
-            playerListElement.appendChild(item);
+            let recentGuessHTML = '';
+            if (player.lastGuess && (Date.now() - player.lastGuess.timestamp < 3000)) {
+                recentGuessHTML = `<span class="recent-guess">${player.lastGuess.guess}</span>`;
+            }
+
+            item.innerHTML = `<div class="player-info"><span>${player.name}</span> ${recentGuessHTML}</div> ${readyStatus}`;
+            gameElements.playerList.appendChild(item);
         });
-    }
-
-    function drawArrow(attackerId, targetId) {
-        const container = document.getElementById('player-list');
-        let arrowContainer = container.querySelector('.arrow-container');
-        if (arrowContainer) {
-            arrowContainer.remove();
-        }
-
-        if (!attackerId || !targetId || attackerId === targetId) return;
-
-        const attackerElem = document.getElementById(`player-item-${attackerId}`);
-        const targetElem = document.getElementById(`player-item-${targetId}`);
-
-        if (!attackerElem || !targetElem) return;
-
-        arrowContainer = document.createElement('div');
-        arrowContainer.className = 'arrow-container';
-
-        const startRect = attackerElem.getBoundingClientRect();
-        const endRect = targetElem.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-
-        const startX = startRect.left + startRect.width / 2 - containerRect.left;
-        const startY = startRect.top + startRect.height / 2 - containerRect.top;
-        const endX = endRect.left + endRect.width / 2 - containerRect.left;
-        const endY = endRect.top + endRect.height / 2 - containerRect.top;
-
-        const dx = endX - startX;
-        const dy = endY - startY;
-        const angle = Math.atan2(dy, dx);
-
-        const numArrows = 3;
-        for (let i = 0; i < numArrows; i++) {
-            const p = (i + 0.5) / numArrows;
-            const arrow = document.createElement('div');
-            arrow.className = 'arrow';
-            arrow.style.left = `${startX + dx * p}px`;
-            arrow.style.top = `${startY + dy * p}px`;
-            arrow.style.transform = `translate(-50%, -50%) rotate(${angle}rad)`;
-            arrow.style.animationDelay = `${i * 0.15}s`;
-            arrowContainer.appendChild(arrow);
-        }
-        container.appendChild(arrowContainer);
     }
 
     function updatePersonalHistory(roomData) {
@@ -501,6 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!guessHistory || !players) return;
 
         const myGuesses = Object.values(guessHistory).filter(log => log.attackerId === currentPlayerId);
+
         const myGuessesByTarget = myGuesses.reduce((acc, log) => {
             if (!acc[log.targetId]) acc[log.targetId] = [];
             acc[log.targetId].push(log);
@@ -511,6 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetName = players[targetId] ? players[targetId].name : 'Unknown';
             const section = document.createElement('div');
             section.innerHTML = `<h4>ทาย ${targetName}</h4>`;
+
             const table = document.createElement('table');
             table.className = 'history-table';
             table.innerHTML = `<thead><tr><th>เลขที่ทาย</th><th>ผล</th></tr></thead>`;
@@ -527,12 +459,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Chat Logic ---
     function handleSendChat() {
         const message = inputs.chat.value.trim();
         if (!message) return;
+
         playSound(sounds.click);
         const chatRef = database.ref(`rooms/${currentRoomId}/chat`).push();
-        chatRef.set({ senderId: currentPlayerId, senderName: playerName, text: message, timestamp: firebase.database.ServerValue.TIMESTAMP });
+        chatRef.set({
+            senderId: currentPlayerId,
+            senderName: playerName,
+            text: message,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
         inputs.chat.value = '';
     }
 
@@ -540,12 +479,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!chatData) return;
         const messages = Object.values(chatData).sort((a, b) => a.timestamp - b.timestamp);
         const lastMessage = messages[messages.length - 1];
+
         if (lastMessage && lastMessage.senderId !== currentPlayerId && (Date.now() - lastMessage.timestamp < 6000)) {
             showChatMarquee(lastMessage);
         }
         if (!isChatOpen && lastMessage) {
             chatElements.unreadIndicator.style.display = 'block';
         }
+
         chatElements.messagesContainer.innerHTML = '';
         messages.forEach(msg => {
             const item = document.createElement('div');
@@ -567,12 +508,16 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => marquee.remove(), 6000);
     }
 
+    // --- End Game Logic ---
     function endGame(roomData) {
         if (turnTimer) clearInterval(turnTimer);
+
         if (roomData.winnerName !== "ไม่มีผู้ชนะ") {
             playSound(sounds.win);
         }
+
         const titles = assignTitles(roomData);
+
         showTitleCards(roomData, titles, () => {
             showSummaryPage(roomData, titles);
         });
@@ -602,6 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const winnerId = Object.keys(roomData.players).find(id => roomData.players[id].name === roomData.winnerName);
         const otherPlayerIds = Object.keys(titles).filter(id => id !== winnerId);
         const playerIdsInOrder = winnerId ? [winnerId, ...otherPlayerIds] : Object.keys(titles);
+
         let currentIndex = 0;
 
         function showNextCard() {
@@ -613,19 +559,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const playerId = playerIdsInOrder[currentIndex];
             const playerData = roomData.players[playerId];
             const titleData = titles[playerId];
+
             if (!playerData || !titleData) {
                 currentIndex++;
                 showNextCard();
                 return;
             }
+
             summaryElements.titleCard.emoji.textContent = titleData.emoji;
             summaryElements.titleCard.name.textContent = playerData.name;
             summaryElements.titleCard.title.textContent = titleData.title;
             summaryElements.titleCard.desc.textContent = titleData.desc;
+
             summaryElements.titleCardOverlay.style.display = 'flex';
             setTimeout(() => {
                 summaryElements.titleCardOverlay.classList.add('visible');
             }, 10);
+
             setTimeout(() => {
                 summaryElements.titleCardOverlay.classList.remove('visible');
                 setTimeout(() => {
@@ -650,12 +600,15 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('summary');
     }
 
+    // --- General Functions ---
     function leaveRoom() {
         playSound(sounds.click);
         if (playerRef) playerRef.remove();
         if (roomRef && roomListener) roomRef.off('value', roomListener);
         if (turnTimer) clearInterval(turnTimer);
+
         playerRef = null; roomRef = null; roomListener = null; currentRoomId = null; currentInput = '';
+
         navigateTo('preLobby');
     }
 
@@ -665,10 +618,8 @@ document.addEventListener('DOMContentLoaded', () => {
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
             let secretNumber = '';
-            const digits = '0123456789'.split('');
             for (let i = 0; i < digitCount; i++) {
-                const randomIndex = Math.floor(Math.random() * digits.length);
-                secretNumber += digits.splice(randomIndex, 1)[0];
+                secretNumber += Math.floor(Math.random() * 10).toString();
             }
             playerRef.update({ isReady: true, secretNumber: secretNumber });
         });
@@ -679,7 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
-            if (currentInput.length < digitCount && !currentInput.includes(e.target.textContent)) {
+            if (currentInput.length < digitCount) {
                 currentInput += e.target.textContent;
                 gameElements.gameDisplay.textContent = currentInput;
             }
@@ -730,4 +681,27 @@ document.addEventListener('DOMContentLoaded', () => {
         chatElements.unreadIndicator.style.display = 'none';
         isChatOpen = true;
         setTimeout(() => {
-            chatElements.body.scrollTop = cha
+            chatElements.body.scrollTop = chatElements.body.scrollHeight;
+        }, 0);
+    });
+    chatElements.closeBtn.addEventListener('click', () => {
+        playSound(sounds.click);
+        chatElements.overlay.style.display = 'none';
+        isChatOpen = false;
+    });
+    chatElements.overlay.addEventListener('click', (e) => {
+        if (e.target === chatElements.overlay) {
+            playSound(sounds.click);
+            chatElements.overlay.style.display = 'none';
+            isChatOpen = false;
+        }
+    });
+
+    // --- Initial Load ---
+    const savedPlayerName = sessionStorage.getItem('playerName');
+    if (savedPlayerName) {
+        inputs.playerName.value = savedPlayerName;
+    }
+    navigateTo('home');
+
+});
