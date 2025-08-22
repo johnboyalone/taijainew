@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมทายเลข</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="app-container">
+
+        <!-- ===== หน้าแรก (Home) ===== -->
+        <div id="page-home" class="page">
+            <div class="card">
+                <h1>เกมทายเลข</h1>
+                <p>ตั้งชื่อของคุณเพื่อเริ่มเล่น</p>
+                <input type="text" id="input-player-name" placeholder="กรอกชื่อของคุณ...">
+                <button id="btn-go-to-lobby" class="btn btn-primary">เข้าสู่ล็อบบี้</button>
+            </div>
+        </div>
+
+        <!-- ===== หน้าล็อบบี้ (Lobby) ===== -->
+        <div id="page-lobby" class="page">
+            <div class="card">
+                <h2>ล็อบบี้</h2>
+                <p>สวัสดี, <span id="lobby-player-name">ผู้เล่น</span>!</p>
+                <button id="btn-create-room" class="btn btn-primary">สร้างห้องใหม่</button>
+                <hr>
+                <h3>รายชื่อห้อง</h3>
+                <div id="room-list-container">
+                    <p>กำลังโหลดรายชื่อห้อง...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== หน้าเกม (Game) ===== -->
+        <div id="page-game" class="page">
+            <div class="card">
+                <h2 id="game-room-name">ห้อง: ...</h2>
+                
+                <!-- ส่วนตั้งค่าก่อนเริ่มเกม -->
+                <div id="setup-section">
+                    <h3>ผู้เล่นในห้อง</h3>
+                    <div id="player-list"></div>
+                    <button id="btn-ready-up" class="btn btn-primary">ฉันพร้อมแล้ว!</button>
+                </div>
+
+                <!-- ส่วนรอผู้เล่นอื่น -->
+                <div id="waiting-section" style="display: none;">
+                    <h3>ยอดเยี่ยม!</h3>
+                    <p>กำลังรอผู้เล่นคนอื่นตั้งค่า...</p>
+                    <div class="loader"></div>
+                </div>
+
+                <!-- ส่วนเล่นเกม -->
+                <div id="gameplay-section" style="display: none;">
+                    <h3>ถึงตาทายแล้ว!</h3>
+                    <div id="game-display" class="game-display"></div>
+                    <div id="keypad-controls">
+                        <div class="keypad">
+                            <button class="key">1</button> <button class="key">2</button> <button class="key">3</button>
+                            <button class="key">4</button> <button class="key">5</button> <button class="key">6</button>
+                            <button class="key">7</button> <button class="key">8</button> <button class="key">9</button>
+                            <button class="key-special" id="btn-delete">ลบ</button>
+                            <button class="key">0</button>
+                            <button class="key-special" id="btn-guess">ทาย</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-leave-room" class="btn btn-danger">ออกจากห้อง</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    
+    <!-- โค้ดเกม -->
+    <script src="script.js"></script>
+
+</body>
+</html>
