@@ -72,11 +72,11 @@ function handleGoToLobby() {
         return;
     }
     playerName = name;
-    sessionStorage.setItem('playerName', playerName); // Save name
+    sessionStorage.setItem('playerName', playerName);
     lobbyElements.playerName.textContent = playerName;
     
     if (!currentPlayerId) {
-        currentPlayerId = database.ref().push().key; // Generate a unique ID for the player
+        currentPlayerId = database.ref().push().key;
     }
     
     listenToRooms();
@@ -110,7 +110,7 @@ function joinRoom(roomId, roomName) {
         isReady: false
     });
 
-    playerRef.onDisconnect().remove(); // Clean up when player disconnects
+    playerRef.onDisconnect().remove();
 
     gameElements.roomName.textContent = `ห้อง: ${roomName}`;
     listenToRoomUpdates();
@@ -127,8 +127,36 @@ function listenToRoomUpdates() {
         }
         const roomData = snapshot.val();
         updatePlayerList(roomData.players);
+        
+        // *** NEW: Check if all players are ready ***
+        checkIfGameCanStart(roomData.players);
     });
 }
+
+// *** NEW FUNCTION: Checks if all players are ready ***
+function checkIfGameCanStart(players) {
+    if (!players) return;
+
+    const playerArray = Object.values(players);
+    // Game needs at least 2 players to start
+    if (playerArray.length < 2) return; 
+
+    const allReady = playerArray.every(p => p.isReady === true);
+
+    if (allReady) {
+        // If everyone is ready, start the game!
+        startGame();
+    }
+}
+
+// *** NEW FUNCTION: Starts the actual game ***
+function startGame() {
+    gameElements.setupSection.style.display = 'none';
+    gameElements.waitingSection.style.display = 'none';
+    gameElements.gameplaySection.style.display = 'block';
+    console.log("Game has started!");
+}
+
 
 function updatePlayerList(players) {
     gameElements.playerList.innerHTML = '';
@@ -173,14 +201,13 @@ function leaveRoom() {
         playerRef.onDisconnect().cancel();
     }
     if (roomRef) {
-        roomRef.off(); // Stop listening to room updates
+        roomRef.off();
     }
     
     currentRoomId = null;
     roomRef = null;
     playerRef = null;
     
-    // Reset game UI
     gameElements.setupSection.style.display = 'block';
     gameElements.waitingSection.style.display = 'none';
     gameElements.gameplaySection.style.display = 'none';
