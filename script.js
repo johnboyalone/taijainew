@@ -254,7 +254,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startGame(playerIds) {
-        roomRef.update({ status: 'playing', playerOrder: playerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+        // Shuffle player order for fairness
+        const shuffledPlayerIds = playerIds.sort(() => Math.random() - 0.5);
+        roomRef.update({ status: 'playing', playerOrder: shuffledPlayerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
     }
 
     function updateGameUI(roomData) {
@@ -285,29 +287,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const attackerPlayerName = players[attackerPlayerId].name;
         gameElements.turn.textContent = `ผู้ทาย: ${attackerPlayerName}`;
 
+        // --- Call the new drawArrow function ---
+        drawArrow(attackerPlayerId, targetPlayerId);
+
         const isMyTurn = attackerPlayerId === currentPlayerId;
         const amIDefeated = players[currentPlayerId]?.status === 'defeated';
         gameElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
         buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
 
-        gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
+        gameElements.turn.style.color = isMyTurn ? 'var(--success-color)' : 'var(--text-secondary)';
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
             playSound(sounds.yourTurn);
         }
-        if (targetPlayerId === currentPlayerId) { gameElements.turn.textContent = `คุณคือเป้าหมาย!`; gameElements.turn.style.color = '#dc3545'; }
+        if (targetPlayerId === currentPlayerId) { 
+            gameElements.target.textContent = `คุณคือเป้าหมาย!`; 
+            gameElements.target.style.color = 'var(--danger-color)'; 
+        } else {
+            gameElements.target.style.color = 'var(--text-secondary)';
+        }
 
         gameElements.timer.style.display = 'block';
         turnTimer = setInterval(() => {
             const elapsed = (Date.now() - turnStartTime) / 1000;
             const remaining = Math.max(0, config.turnTime - elapsed);
             gameElements.timer.textContent = Math.ceil(remaining);
-            if (remaining <= 0) { clearInterval(turnTimer); if (isMyTurn) handleTimeOut(attackerPlayerId); }
+            if (remaining <= 0) { 
+                clearInterval(turnTimer); 
+                if (isMyTurn) handleTimeOut(attackerPlayerId); 
+            }
         }, 500);
 
         updatePersonalHistory(roomData);
     }
-
     function handleAction(isAssassination) {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
@@ -404,25 +416,102 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- UI Updates ---
     function updatePlayerList(roomData) {
-        const { players } = roomData;
-        gameElements.playerList.innerHTML = '';
+        const { players, status, playerOrder, targetPlayerIndex, attackerTurnIndex } = roomData;
+        const playerListElement = gameElements.playerList;
+        playerListElement.innerHTML = ''; // Clear previous list
         if (!players) return;
-        Object.entries(players).forEach(([id, player]) => {
+    
+        const playerIds = Object.keys(players);
+    
+        // Adjust layout based on player count
+        if (playerIds.length >= 3) {
+            playerListElement.classList.remove('layout-2-cols');
+            playerListElement.classList.add('layout-3-cols');
+        } else {
+            playerListElement.classList.remove('layout-3-cols');
+            playerListElement.classList.add('layout-2-cols');
+        }
+    
+        let attackerPlayerId = null;
+        let targetPlayerId = null;
+    
+        if (status === 'playing') {
+            const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
+            if (activePlayers.length > 1) {
+                const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
+                targetPlayerId = activePlayers[currentTargetIndexInActive];
+    
+                const attackers = activePlayers.filter(id => id !== targetPlayerId);
+                if (attackers.length > 0) {
+                    const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
+                    attackerPlayerId = attackers[currentAttackerIndexInAttackers];
+                }
+            }
+        }
+    
+        playerIds.forEach(id => {
+            const player = players[id];
             const item = document.createElement('div');
             item.className = 'player-item';
+            item.id = `player-item-${id}`; // Add ID for positioning
+    
             if (player.status === 'defeated') item.classList.add('player-defeated');
-
+            if (id === targetPlayerId) item.classList.add('is-target');
+            if (id === attackerPlayerId) item.classList.add('is-attacker');
+    
             const hpBar = `<div class="hp-bar">${[...Array(3)].map((_, i) => `<div class="hp-point ${i < player.hp ? '' : 'lost'}"></div>`).join('')}</div>`;
-            const readyStatus = roomData.status === 'waiting' ? (player.isReady ? `<span style="color:green;">พร้อมแล้ว</span>` : `<span>กำลังรอ...</span>`) : hpBar;
-
-            let recentGuessHTML = '';
-            if (player.lastGuess && (Date.now() - player.lastGuess.timestamp < 3000)) {
-                recentGuessHTML = `<span class="recent-guess">${player.lastGuess.guess}</span>`;
-            }
-
-            item.innerHTML = `<div class="player-info"><span>${player.name}</span> ${recentGuessHTML}</div> ${readyStatus}`;
-            gameElements.playerList.appendChild(item);
+            const readyStatus = status === 'waiting' ? `<span style="color:var(--text-secondary);">กำลังรอ...</span>` : hpBar;
+            const playerStatusDisplay = player.isReady && status === 'waiting' ? `<span style="color:var(--success-color);">พร้อมแล้ว</span>` : readyStatus;
+    
+            item.innerHTML = `<div class="player-info">${player.name}</div> ${playerStatusDisplay}`;
+            playerListElement.appendChild(item);
         });
+    }
+    
+    function drawArrow(attackerId, targetId) {
+        const container = document.getElementById('player-list');
+        const existingArrow = container.querySelector('.arrow-container');
+        if (existingArrow) {
+            existingArrow.remove();
+        }
+    
+        if (!attackerId || !targetId || attackerId === targetId) return;
+    
+        const attackerElem = document.getElementById(`player-item-${attackerId}`);
+        const targetElem = document.getElementById(`player-item-${targetId}`);
+    
+        if (!attackerElem || !targetElem) return;
+    
+        const arrowContainer = document.createElement('div');
+        arrowContainer.className = 'arrow-container';
+    
+        const startRect = attackerElem.getBoundingClientRect();
+        const endRect = targetElem.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+    
+        const startX = startRect.left + startRect.width / 2 - containerRect.left;
+        const startY = startRect.top + startRect.height / 2 - containerRect.top;
+        const endX = endRect.left + endRect.width / 2 - containerRect.left;
+        const endY = endRect.top + endRect.height / 2 - containerRect.top;
+    
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+    
+        const numArrows = 3;
+        for (let i = 0; i < numArrows; i++) {
+            const p = (i + 1) / (numArrows + 1);
+            const arrow = document.createElement('div');
+            arrow.className = 'arrow';
+            arrow.style.left = `${startX + dx * p}px`;
+            arrow.style.top = `${startY + dy * p}px`;
+            arrow.style.transform = `translate(-50%, -50%) rotate(${angle}rad)`;
+            arrow.style.animationDelay = `${i * 0.15}s`;
+            arrowContainer.appendChild(arrow);
+        }
+    
+        container.appendChild(arrowContainer);
     }
 
     function updatePersonalHistory(roomData) {
@@ -618,8 +707,10 @@ document.addEventListener('DOMContentLoaded', () => {
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
             let secretNumber = '';
+            const digits = '0123456789'.split('');
             for (let i = 0; i < digitCount; i++) {
-                secretNumber += Math.floor(Math.random() * 10).toString();
+                const randomIndex = Math.floor(Math.random() * digits.length);
+                secretNumber += digits.splice(randomIndex, 1)[0];
             }
             playerRef.update({ isReady: true, secretNumber: secretNumber });
         });
@@ -630,7 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
-            if (currentInput.length < digitCount) {
+            if (currentInput.length < digitCount && !currentInput.includes(e.target.textContent)) {
                 currentInput += e.target.textContent;
                 gameElements.gameDisplay.textContent = currentInput;
             }
@@ -671,37 +762,4 @@ document.addEventListener('DOMContentLoaded', () => {
     inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
     gameElements.keypad.addEventListener('click', handleKeypadClick);
 
-    historyElements.toggleBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'flex'; });
-    historyElements.closeBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'none'; });
-    historyElements.overlay.addEventListener('click', (e) => { if (e.target === historyElements.overlay) { playSound(sounds.click); historyElements.overlay.style.display = 'none'; } });
-
-    chatElements.toggleBtn.addEventListener('click', () => {
-        playSound(sounds.click);
-        chatElements.overlay.style.display = 'flex';
-        chatElements.unreadIndicator.style.display = 'none';
-        isChatOpen = true;
-        setTimeout(() => {
-            chatElements.body.scrollTop = chatElements.body.scrollHeight;
-        }, 0);
-    });
-    chatElements.closeBtn.addEventListener('click', () => {
-        playSound(sounds.click);
-        chatElements.overlay.style.display = 'none';
-        isChatOpen = false;
-    });
-    chatElements.overlay.addEventListener('click', (e) => {
-        if (e.target === chatElements.overlay) {
-            playSound(sounds.click);
-            chatElements.overlay.style.display = 'none';
-            isChatOpen = false;
-        }
-    });
-
-    // --- Initial Load ---
-    const savedPlayerName = sessionStorage.getItem('playerName');
-    if (savedPlayerName) {
-        inputs.playerName.value = savedPlayerName;
-    }
-    navigateTo('home');
-
-});
+    historyElements.toggleBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.
