@@ -171,6 +171,25 @@ input[type="text"]::placeholder { color: #b2bec3; }
     position: absolute; top: 5px; right: 5px; width: 10px; height: 10px;
     background-color: var(--danger-color); border-radius: 50%; border: 2px solid white;
 }
+#history-recent-guesses {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0,0,0,0.7);
+    color: white;
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+#history-toggle-btn:hover #history-recent-guesses {
+    opacity: 1;
+}
+
 
 .player-list-setup {
     margin-top: 20px;
@@ -210,7 +229,6 @@ input[type="text"]::placeholder { color: #b2bec3; }
 .hp-point { width: 12px; height: 12px; background-color: var(--primary-color); border-radius: 50%; }
 .hp-point.lost { background-color: #ddd; }
 
-/* แก้ไข: ลดขนาดช่องเลขลับ */
 #my-secret-number-display {
     padding: 10px 15px;
 }
@@ -237,7 +255,7 @@ input[type="text"]::placeholder { color: #b2bec3; }
 #btn-assassinate { margin-top: 15px; }
 #btn-leave-room { margin-top: 10px; }
 
-/* --- หน้าสรุปผล (Summary) - แก้ไข Layout --- */
+/* --- หน้าสรุปผล (Summary) --- */
 #summary-winner {
     background: var(--success-color);
     color: white;
@@ -302,7 +320,6 @@ input[type="text"]::placeholder { color: #b2bec3; }
     display: flex; justify-content: center; align-items: center;
     padding: 20px; box-sizing: border-box;
 }
-/* แก้ไข: ทำให้ Modal ทึบขึ้น */
 .modal-content {
     background: var(--content-bg-solid);
     padding: 20px; border-radius: 15px;
@@ -329,7 +346,7 @@ input[type="text"]::placeholder { color: #b2bec3; }
 #chat-input { flex-grow: 1; margin: 0; }
 #chat-send-btn { padding: 10px 15px; border: none; background-color: var(--primary-color); color: white; border-radius: 10px; cursor: pointer; }
 
-/* --- Settings Modal & Toggle Switch - แก้ไขใหม่ --- */
+/* --- Settings Modal & Toggle Switch --- */
 .btn-settings { position: absolute; top: 15px; right: 15px; }
 .settings-body {
     display: flex;
@@ -389,6 +406,47 @@ input:checked + .slider:before {
     transform: translateX(22px);
 }
 
+/* --- Title Card (ฉายา) - แก้ไขให้เต็มจอ --- */
+#title-card-overlay {
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+}
+#title-card-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+#title-card {
+    background: var(--content-bg-solid);
+    padding: 30px;
+    border-radius: 20px;
+    width: 90vw; /* ทำให้กว้างขึ้น */
+    max-width: 450px; /* แต่ไม่เกินขนาดที่กำหนด */
+    transform: scale(0.7);
+    transition: transform 0.5s;
+}
+#title-card-overlay.visible #title-card {
+    transform: scale(1);
+}
+#title-card-emoji {
+    font-size: 5rem; /* ใหญ่ขึ้น */
+    margin-bottom: 15px;
+}
+#title-card-name {
+    font-size: 2rem; /* ใหญ่ขึ้น */
+    margin-bottom: 5px;
+}
+#title-card-title {
+    font-size: 1.5rem; /* ใหญ่ขึ้น */
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+#title-card-desc {
+    font-size: 1.1rem; /* ใหญ่ขึ้น */
+    color: var(--text-light);
+}
+
+
 .defeated-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(45, 52, 54, 0.85); z-index: 999;
@@ -396,6 +454,26 @@ input:checked + .slider:before {
     flex-direction: column; text-align: center; color: white;
 }
 .defeated-content h1 { font-size: 2.5rem; }
+
+/* --- Attack Animation (ลูกศรไฟวิ่ง) - แก้ไขใหม่ --- */
+#attack-animation-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* ทำให้คลิกทะลุได้ */
+    overflow: hidden;
+}
+.attack-arrow {
+    position: absolute;
+    font-size: 2rem;
+    color: var(--danger-color);
+    text-shadow: 0 0 10px var(--primary-color);
+    transition: transform 0.5s cubic-bezier(0.42, 0, 0.58, 1); /* ทำให้การเคลื่อนไหวสวยงามขึ้น */
+    will-change: transform;
+}
+
 
 /* Spinner */
 .spinner {
