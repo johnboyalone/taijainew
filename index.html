@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เกมทายเลข</title>
+    <title>เกมทายเลขมหาประลัย</title>
     <link rel="stylesheet" href="style.css">
+    <!-- โค้ดที่จำเป็นและถูกนำกลับมาแล้ว -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
@@ -149,7 +150,9 @@
                 <h3>แชทในห้อง</h3>
                 <button id="chat-close-btn" class="close-btn">&times;</button>
             </div>
-            <div id="chat-modal-body"></div>
+            <div id="chat-modal-body">
+                <div id="chat-messages"></div>
+            </div>
             <div class="chat-input-area">
                 <input type="text" id="chat-input" placeholder="พิมพ์ข้อความ...">
                 <button id="chat-send-btn">ส่ง</button>
@@ -184,6 +187,9 @@
             <p id="title-card-desc"></p>
         </div>
     </div>
+
+    <!-- โค้ด JavaScript ของเกม -->
+    <script src="script.js"></script>
 
 </body>
 </html>
