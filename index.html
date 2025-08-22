@@ -5,26 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>เกมทายเลขมหาประลัย</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
     <!-- หน้าหลัก: กรอกชื่อ -->
-    <div id="page-home" class="page">
+    <div id="page-home" class="page" style="display: flex;">
         <div class="card">
-            <div class="settings-icon-container">
+            <div class="settings-icon-wrapper">
                 <button id="settings-toggle-btn" class="btn-icon">⚙️</button>
             </div>
             <h1>เกมทายเลข<br>มหาประลัย</h1>
             <p>ใส่ชื่อของคุณเพื่อเริ่มเล่น</p>
-            <div class="input-group">
-                <input type="text" id="input-player-name" placeholder="ชื่อผู้เล่น..." maxlength="12">
-            </div>
+            <input type="text" id="input-player-name" placeholder="ชื่อผู้เล่น..." maxlength="12">
             <button id="btn-go-to-pre-lobby" class="btn btn-primary">ไปต่อ</button>
         </div>
     </div>
@@ -34,10 +28,8 @@
         <div class="card">
             <h1>สวัสดี, <span id="pre-lobby-player-name"></span>!</h1>
             <p>คุณต้องการทำอะไร?</p>
-            <div class="button-group">
-                <button id="btn-go-to-create" class="btn btn-primary">สร้างห้องใหม่</button>
-                <button id="btn-go-to-join" class="btn btn-secondary">เข้าร่วมห้อง</button>
-            </div>
+            <button id="btn-go-to-create" class="btn btn-primary">สร้างห้องใหม่</button>
+            <button id="btn-go-to-join" class="btn btn-secondary">เข้าร่วมห้อง</button>
         </div>
     </div>
 
@@ -70,7 +62,6 @@
             <div class="form-group">
                 <label for="input-turn-time">เวลาในแต่ละตา (วินาที)</label>
                 <select id="input-turn-time">
-                    <option value="20">20</option>
                     <option value="30" selected>30</option>
                     <option value="45">45</option>
                     <option value="60">60</option>
@@ -90,51 +81,40 @@
         </div>
     </div>
 
-    <!-- ================================================== -->
-    <!-- หน้าเกม (โครงสร้างใหม่ที่เรียบง่าย) -->
-    <!-- ================================================== -->
-    <div id="page-game" class="page" style="display: none;">
-
-        <!-- ส่วน Header ที่ใช้ร่วมกัน -->
-        <div id="game-header-container">
+    <!-- หน้าเกม -->
+    <div id="page-game" class="page game-layout" style="display: none;">
+        <div class="game-top-bar">
             <div id="game-turn-indicator">กำลังรอผู้เล่น...</div>
-            <div class="game-header-buttons">
+            <div class="game-top-icons">
                 <button id="history-toggle-btn" class="btn-icon">
-                    📜<span id="history-unread-indicator"></span>
+                    📜<span id="history-unread-indicator" class="unread-badge" style="display: none;"></span>
                 </button>
                 <button id="chat-toggle-btn" class="btn-icon">
-                    💬<span id="chat-unread-indicator" style="display: none;"></span>
+                    💬<span id="chat-unread-indicator" class="unread-badge" style="display: none;"></span>
                 </button>
             </div>
         </div>
 
-        <!-- ที่แสดงรายชื่อผู้เล่น (ใช้ที่นี่ที่เดียวเท่านั้น!) -->
-        <div id="player-list-container">
-            <!-- รายชื่อผู้เล่นจะถูกใส่เข้ามาตรงนี้ -->
-        </div>
+        <div id="player-list-container"></div>
+        <div id="attack-animation-container"></div>
 
-        <!-- ส่วนตั้งค่าเลขลับ (จะถูกซ่อน/แสดง) -->
-        <div id="setup-section">
+        <div id="setup-section" class="game-section">
             <h3>ถึงเวลาตั้งเลขลับของคุณ!</h3>
             <p>กรุณากด "พร้อมแล้ว!" เพื่อให้ระบบสุ่มเลขให้</p>
             <button id="btn-ready-up" class="btn btn-primary">พร้อมแล้ว!</button>
         </div>
 
-        <!-- ส่วนการเล่นเกม (จะถูกซ่อน/แสดง) -->
-        <div id="gameplay-section" style="display: none;">
-            <div id="game-container">
-                <div id="attack-animation-container"></div>
-                <div class="game-info-card" id="my-secret-number-card">
-                    <label>เลขลับของคุณ</label>
-                    <span id="my-secret-number-text">????</span>
-                </div>
-                <div class="game-info-card" id="timer-card">
-                    <div id="timer-bar"></div>
-                </div>
-                <div class="game-info-card" id="guess-display-card">
-                    <span id="game-display"></span>
-                </div>
+        <div id="gameplay-section" class="game-section" style="display: none;">
+            <div class="my-secret-number">
+                <label>เลขลับของคุณ</label>
+                <div id="my-secret-number-text">????</div>
             </div>
+            <div class="timer-container">
+                <div id="timer-bar"></div>
+            </div>
+            <div id="game-display"></div>
+            
+            <!-- โครงสร้างที่แก้ไขแล้ว -->
             <div class="keypad">
                 <button class="key">1</button> <button class="key">2</button> <button class="key">3</button>
                 <button class="key">4</button> <button class="key">5</button> <button class="key">6</button>
@@ -144,34 +124,27 @@
                 <button id="btn-guess" class="key key-action">ทาย</button>
             </div>
             <button id="btn-assassinate" class="btn btn-danger">ตุยเย่!</button>
-        </div>
+            <!-- จบส่วนที่แก้ไข -->
 
-        <!-- ปุ่มออกจากห้อง -->
+        </div>
         <button id="btn-leave-room" class="btn btn-secondary">ออกจากห้อง</button>
     </div>
 
-
-    <!-- Pop-up ตั้งค่า -->
+    <!-- Pop-up Settings -->
     <div id="settings-modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>ตั้งค่าเสียง</h3>
                 <button id="settings-close-btn" class="close-btn">&times;</button>
             </div>
-            <div class="settings-modal-body">
+            <div class="settings-body">
                 <div class="setting-item">
                     <label for="toggle-bgm">เพลงพื้นหลัง</label>
-                    <label class="switch">
-                        <input type="checkbox" id="toggle-bgm">
-                        <span class="slider round"></span>
-                    </label>
+                    <label class="switch"><input type="checkbox" id="toggle-bgm"><span class="slider round"></span></label>
                 </div>
                 <div class="setting-item">
                     <label for="toggle-sfx">เอฟเฟกต์เสียง</label>
-                    <label class="switch">
-                        <input type="checkbox" id="toggle-sfx">
-                        <span class="slider round"></span>
-                    </label>
+                    <label class="switch"><input type="checkbox" id="toggle-sfx"><span class="slider round"></span></label>
                 </div>
             </div>
         </div>
@@ -226,15 +199,14 @@
     <!-- หน้าสรุปผลเกม -->
     <div id="page-summary" class="page" style="display: none;">
         <div class="card">
-            <h1>สรุปผลการแข่งขัน</h1>
-            <div id="summary-winner"></div>
+            <h2>สรุปผลการแข่งขัน</h2>
+            <div id="summary-winner">ผู้ชนะคือ: ...</div>
             <div id="summary-player-list"></div>
             <button id="btn-play-again" class="btn btn-success">เล่นอีกครั้ง</button>
             <button id="btn-back-to-home" class="btn btn-secondary">กลับไปหน้าแรก</button>
         </div>
     </div>
 
-    <!-- โค้ด JavaScript ของเกม -->
     <script src="script.js"></script>
 
 </body>

@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
     let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
     let isChatOpen = false;
-    let recentGuesses = [];
+    let hasShownSummary = false; // Flag to prevent re-showing summary
 
     // --- Firebase Config ---
     const firebaseConfig = {
@@ -180,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         roomRef = database.ref(`rooms/${currentRoomId}`);
         
         navigateTo('game'); 
+        hasShownSummary = false; // Reset summary flag
 
         roomRef.child('players').once('value', snapshot => {
             roomRef.child('config').once('value', configSnapshot => {
@@ -198,7 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     stats: { guesses: 0, correctGuesses: 0, assassinateSuccess: 0, assassinateFails: 0, timeOuts: 0, damageTaken: 0, firstBlood: false }
                 });
                 playerRef.onDisconnect().remove();
-                recentGuesses = [];
                 listenToRoomUpdates();
             });
         });
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         item.className = 'room-item';
                         item.innerHTML = `<strong>${room.name}</strong> (${playerCount}/${room.config.maxPlayers}) - ${room.config.digitCount} หลัก`;
                         item.onclick = () => {
-                            roomsRef.off(); // Stop listening to prevent multiple joins
+                            roomsRef.off();
                             joinRoom(id);
                         };
                         lobbyElements.roomListContainer.appendChild(item);
@@ -263,15 +263,14 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (roomData.status === 'playing') {
                 updateGameUI(roomData);
             } else if (roomData.status === 'finished') {
-                // The game has officially ended. The winner is decided.
-                // We just need to display the results.
-                if (!roomData.summaryShown) {
-                    // This state should ideally not be reached by clients anymore, but as a fallback:
-                    console.log("Client trying to show summary, but it should be handled by the winner.");
-                }
-                // The winner will trigger the title cards, and then everyone will see the summary page.
-                if (roomData.titles && !summaryElements.titleCardOverlay.classList.contains('visible')) {
-                     showSummaryPage(roomData, roomData.titles);
+                if (turnTimer) clearInterval(turnTimer);
+                // *** CRITICAL FIX FOR RACE CONDITION ***
+                // Only proceed if the final data (titles) is present and we haven't shown the summary yet.
+                if (roomData.titles && !hasShownSummary) {
+                    hasShownSummary = true; // Set flag immediately to prevent re-triggering
+                    showTitleCards(roomData, roomData.titles, () => {
+                        showSummaryPage(roomData, roomData.titles);
+                    });
                 }
             }
         });
@@ -297,6 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
             turnStartTime: firebase.database.ServerValue.TIMESTAMP
         });
     }
+
     function updateGameUI(roomData) {
         gameElements.setupSection.style.display = 'none';
         gameElements.gameplaySection.style.display = 'flex';
@@ -360,7 +360,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 100);
     }
-
     function handleAction(isAssassination) {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
@@ -412,19 +411,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (myHp <= 0) updates[`/players/${currentPlayerId}/status`] = 'defeated';
                 }
             } else {
+                // *** CRITICAL BUG FIX ***
+                // A correct non-assassination guess should NOT defeat the player.
+                // It only logs the result. The player must use the "Assassinate" button to win.
                 if (isCorrect) {
                     playSound(sounds.correct);
-                    updates[`/players/${targetPlayerId}/status`] = 'defeated';
-                    updates[`/players/${targetPlayerId}/hp`] = 0;
                     statsUpdate.correctGuesses = (statsUpdate.correctGuesses || 0) + 1;
-                     if (Object.values(players).filter(p => p.status === 'playing').length === 2) {
-                        statsUpdate.firstBlood = true;
-                    }
                 }
             }
             updates[`/players/${currentPlayerId}/stats`] = statsUpdate;
 
-            roomRef.update(updates).then(() => moveToNextTurn(roomData)); // Pass current roomData
+            roomRef.update(updates).then(() => moveToNextTurn());
             currentInput = '';
             gameElements.gameDisplay.textContent = '';
         });
@@ -449,18 +446,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             updates[`/players/${timedOutPlayerId}/stats`] = statsUpdate;
-            roomRef.update(updates).then(() => moveToNextTurn(roomData));
+            roomRef.update(updates).then(() => moveToNextTurn());
         });
     }
 
-    function moveToNextTurn(previousRoomData) {
+    function moveToNextTurn() {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
             if (roomData.status !== 'playing') return;
 
             const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
             if (activePlayers.length <= 1) {
-                // THIS IS THE OFFICIAL TRIGGER FOR ENDING THE GAME
                 endGameSequence(roomData);
                 return;
             }
@@ -533,6 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
             playerListContainer.appendChild(item);
         });
     }
+
     function playAttackAnimation(attackerId, targetId) {
         const attackerEl = document.querySelector(`.player-item[data-player-id="${attackerId}"]`);
         const targetEl = document.querySelector(`.player-item[data-player-id="${targetId}"]`);
@@ -572,11 +569,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const logs = Object.values(historyData).sort((a, b) => b.timestamp - a.timestamp);
         
-        const oldRecentCount = recentGuesses.length;
-        recentGuesses = logs.slice(0, 3).map(log => log.guess);
-        if (logs.length > oldRecentCount && !historyElements.overlay.style.display) {
-            historyElements.unreadIndicator.style.display = 'block';
-            historyElements.unreadIndicator.textContent = logs.length - oldRecentCount;
+        if (logs.length > 0 && !historyElements.overlay.style.display) {
+            historyElements.unreadIndicator.style.display = 'flex';
+            historyElements.unreadIndicator.textContent = logs.length;
         }
 
         const table = document.createElement('table');
@@ -642,8 +637,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function endGameSequence(roomData) {
-        if (turnTimer) clearInterval(turnTimer);
-        
         const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
         const winner = activePlayers.length === 1 ? activePlayers[0] : null;
         const winnerName = winner ? winner.name : "ไม่มีผู้ชนะ";
@@ -656,17 +649,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const titles = assignTitles(roomData);
         
+        // This is the final, single update that concludes the game.
         roomRef.update({
             status: 'finished',
             winnerName: winnerName,
-            titles: titles,
-            summaryShown: true // This flag is now mainly for archival
-        }).then(() => {
-            // Now that the final state is set, everyone will see it and react
-            // The winner (or anyone, really) can now trigger the title cards
-            showTitleCards(roomData, titles, () => {
-                showSummaryPage(roomData, titles);
-            });
+            titles: titles
         });
     }
 
