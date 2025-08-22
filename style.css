@@ -281,6 +281,75 @@ input[type="text"], select {
     cursor: pointer;
 }
 
+/* Settings Modal */
+#settings-modal-body {
+    text-align: left;
+}
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+}
+.setting-item label {
+    font-size: 1.1rem;
+}
+/* The switch - the box around the slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+input:checked + .slider {
+  background-color: var(--primary-color);
+}
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary-color);
+}
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+.slider.round:before {
+  border-radius: 50%;
+}
+
+
 /* History Modal */
 #history-modal-body {
     overflow-y: auto;
@@ -366,98 +435,46 @@ input[type="text"], select {
     border: 2px solid white;
 }
 
-/* Settings Modal & Toggle Switch (ที่เพิ่มเข้ามาใหม่) */
-.setting-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 5px;
-    font-size: 1.1rem;
-}
-.setting-item:not(:last-child) {
-    border-bottom: 1px solid #eee;
-}
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 60px;
-    height: 34px;
-}
-.switch input { 
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-}
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 26px;
-    width: 26px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .4s;
-}
-input:checked + .slider {
-    background-color: var(--primary-color);
-}
-input:focus + .slider {
-    box-shadow: 0 0 1px var(--primary-color);
-}
-input:checked + .slider:before {
-    transform: translateX(26px);
-}
-.slider.round {
-    border-radius: 34px;
-}
-.slider.round:before {
-    border-radius: 50%;
-}
-
 /* Chat Marquee (ข้อความวิ่งกลางจอ) */
 #chat-marquee-container {
-    position: fixed;
+    position: fixed; /* เปลี่ยนเป็น fixed เพื่อให้อยู่กลางจอเสมอ */
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    max-width: 600px;
-    height: 40px;
+    transform: translate(-50%, -50%); /* จัดให้อยู่กึ่งกลางเป๊ะๆ */
+    width: 100%; /* ทำให้ container กว้างเต็มจอ */
+    max-width: 600px; /* แต่ไม่กว้างเกินไปบนจอใหญ่ */
+    height: 40px; /* เพิ่มความสูงเล็กน้อย */
     overflow: hidden;
     pointer-events: none;
     z-index: 1100;
 }
+
 .chat-marquee-item {
     position: absolute;
     white-space: nowrap;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.8); /* ทำให้เข้มขึ้นเล็กน้อย */
     color: white;
-    padding: 8px 20px;
+    padding: 8px 20px; /* เพิ่ม padding ให้ดูใหญ่ขึ้น */
     border-radius: 20px;
-    font-size: 1.1rem;
+    font-size: 1.1rem; /* เพิ่มขนาดฟอนต์ */
     font-weight: 600;
-    animation: marquee-center 6s linear forwards;
+    animation: marquee-center 6s linear forwards; /* เรียกใช้ animation ใหม่ */
 }
+
+/* Keyframe ใหม่สำหรับวิ่งจากขวาไปซ้ายผ่านกลางจอ */
 @keyframes marquee-center {
     0% {
+        /* เริ่มจากนอกจอฝั่งขวา */
         transform: translateX(150%);
         opacity: 1;
     }
     100% {
+        /* วิ่งไปจนสุดจอด้านซ้าย */
         transform: translateX(-150%);
         opacity: 1;
     }
 }
+
 
 /* --- Defeated & Summary --- */
 #defeated-overlay {
