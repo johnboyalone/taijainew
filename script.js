@@ -16,7 +16,6 @@ let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput 
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
 let isChatOpen = false;
 
-// --- รอให้ HTML โหลดเสร็จก่อนเริ่มทำงาน ---
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- DOM Elements ---
@@ -93,6 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     const defeatedOverlay = document.getElementById('defeated-overlay');
+    const winnerAnnouncement = {
+        overlay: document.getElementById('winner-announcement-overlay'),
+        name: document.getElementById('winner-announcement-name')
+    };
 
     // --- Navigation ---
     function navigateTo(pageName) {
@@ -177,22 +180,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!roomRef) return;
         if (roomListener) roomRef.off('value', roomListener);
         roomListener = roomRef.on('value', snapshot => {
-            if (!snapshot.exists()) { alert('ห้องถูกปิดแล้ว'); leaveRoom(); return; }
+            if (!snapshot.exists()) {
+                alert('ห้องถูกปิดแล้ว');
+                leaveRoom();
+                return;
+            }
             const roomData = snapshot.val();
             updatePlayerList(roomData);
             updateChat(roomData.chat);
 
-            const myStatus = roomData.players[currentPlayerId]?.status;
-            defeatedOverlay.style.display = myStatus === 'defeated' ? 'flex' : 'none';
+            const myPlayer = roomData.players[currentPlayerId];
+            if (myPlayer) {
+                defeatedOverlay.style.display = myPlayer.status === 'defeated' ? 'flex' : 'none';
+            }
 
             if (roomData.status === 'waiting') {
-                gameElements.setupSection.style.display = roomData.players[currentPlayerId]?.isReady ? 'none' : 'block';
-                gameElements.waitingSection.style.display = roomData.players[currentPlayerId]?.isReady ? 'block' : 'none';
+                gameElements.setupSection.style.display = myPlayer?.isReady ? 'none' : 'block';
+                gameElements.waitingSection.style.display = myPlayer?.isReady ? 'block' : 'none';
                 gameElements.gameplaySection.style.display = 'none';
                 checkIfGameCanStart(roomData);
             } else if (roomData.status === 'playing') {
-                updateGameUI(roomData);
+                const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
+                if (activePlayers.length <= 1) {
+                    const winner = activePlayers.length === 1 ? activePlayers[0] : null;
+                    roomRef.update({
+                        status: 'finished',
+                        winnerName: winner ? winner.name : "ไม่มีผู้ชนะ"
+                    });
+                } else {
+                    updateGameUI(roomData);
+                }
             } else if (roomData.status === 'finished' && !roomData.summaryShown) {
+                roomRef.update({ summaryShown: true });
                 endGame(roomData);
             }
         });
@@ -217,27 +236,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (turnTimer) clearInterval(turnTimer);
 
-        const { playerOrder, players, targetPlayerIndex, attackerTurnIndex, status, config, turnStartTime } = roomData;
+        const { playerOrder, players, targetPlayerIndex, attackerTurnIndex, config, turnStartTime } = roomData;
 
         if (players[currentPlayerId] && players[currentPlayerId].secretNumber) {
             gameElements.mySecretNumber.textContent = players[currentPlayerId].secretNumber;
         }
 
         const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-
-        if (activePlayers.length <= 1 && status === 'playing') {
-            const winnerName = activePlayers.length > 0 ? players[activePlayers[0]].name : "ไม่มี";
-            roomRef.update({ status: 'finished', winnerName: winnerName });
-            return;
-        }
-
+        
         const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
         const targetPlayerId = activePlayers[currentTargetIndexInActive];
         const targetPlayerName = players[targetPlayerId].name;
         gameElements.target.textContent = `เป้าหมาย: ${targetPlayerName}`;
 
         const attackers = activePlayers.filter(id => id !== targetPlayerId);
-        if (attackers.length === 0) { roomRef.update({ status: 'finished', winnerName: targetPlayerName }); return; }
+        if (attackers.length === 0) { return; } 
 
         const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
         const attackerPlayerId = attackers[currentAttackerIndexInAttackers];
@@ -322,9 +335,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function moveToNextTurn() {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
+            if (roomData.status !== 'playing') return;
+
             const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
             const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-            if (activePlayers.length <= 1) { roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP }); return; }
+            if (activePlayers.length <= 1) { 
+                roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP }); 
+                return; 
+            }
 
             const currentTargetId = activePlayers[targetPlayerIndex % activePlayers.length];
             const attackers = activePlayers.filter(id => id !== currentTargetId);
@@ -453,13 +471,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- End Game Logic ---
     function endGame(roomData) {
-        roomRef.update({ summaryShown: true });
         if (turnTimer) clearInterval(turnTimer);
 
-        const titles = assignTitles(roomData);
-        showTitleCards(titles, () => {
-            showSummaryPage(roomData, titles);
-        });
+        winnerAnnouncement.name.textContent = roomData.winnerName;
+        winnerAnnouncement.overlay.style.display = 'flex';
+        setTimeout(() => {
+            winnerAnnouncement.overlay.classList.add('visible');
+        }, 10);
+
+        setTimeout(() => {
+            winnerAnnouncement.overlay.classList.remove('visible');
+            setTimeout(() => {
+                winnerAnnouncement.overlay.style.display = 'none';
+                const titles = assignTitles(roomData);
+                showTitleCards(roomData, titles, () => {
+                    showSummaryPage(roomData, titles);
+                });
+            }, 500);
+        }, 5000);
     }
 
     function assignTitles(roomData) {
@@ -467,13 +496,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let titles = {};
         Object.entries(players).forEach(([id, player]) => {
             const stats = player.stats || { guesses: 0, assassinateFails: 0, timeOuts: 0 };
-            if (player.status !== 'defeated') {
+            if (player.name === roomData.winnerName) {
                 titles[id] = { emoji: '👑', title: 'ผู้รอดชีวิตหนึ่งเดียว', desc: 'ยืนหนึ่งอย่างสมศักดิ์ศรี!' };
             } else if (stats.assassinateFails > 1) {
                 titles[id] = { emoji: '🤡', title: 'มือสังหารจอมพลาดเป้า', desc: 'เกือบจะเท่แล้ว...ถ้าไม่พลาดเอง' };
             } else if (stats.timeOuts > 1) {
                 titles[id] = { emoji: '🐌', title: 'นักคิดแห่งยุค', desc: 'คิดนานจนเพื่อนหลับหมดแล้ว' };
-            } else if (stats.guesses === 0) {
+            } else if (stats.guesses === 0 && player.status === 'defeated') {
                 titles[id] = { emoji: '👻', title: 'ผู้ไร้ตัวตน', desc: 'มาเล่นจริงๆ ใช่ไหม?' };
             } else {
                 titles[id] = { emoji: '🪦', title: 'ผู้ล่วงลับ', desc: 'พยายามได้ดีมากแล้วเพื่อน' };
@@ -482,39 +511,42 @@ document.addEventListener('DOMContentLoaded', () => {
         return titles;
     }
 
-    function showTitleCards(titles, onComplete) {
+    function showTitleCards(roomData, titles, onComplete) {
         const playerIds = Object.keys(titles);
         let currentIndex = 0;
 
         function showNextCard() {
             if (currentIndex >= playerIds.length) {
-                summaryElements.titleCardOverlay.style.display = 'none'; // Hide instead of removing class
-                setTimeout(onComplete, 500);
+                summaryElements.titleCardOverlay.style.display = 'none';
+                if (onComplete) onComplete();
                 return;
             }
             const playerId = playerIds[currentIndex];
-            // Since we have roomData, we can get player data from there directly
             const playerData = roomData.players[playerId];
             const titleData = titles[playerId];
+
+            if (!playerData || !titleData) {
+                currentIndex++;
+                showNextCard();
+                return;
+            }
 
             summaryElements.titleCard.emoji.textContent = titleData.emoji;
             summaryElements.titleCard.name.textContent = playerData.name;
             summaryElements.titleCard.title.textContent = titleData.title;
             summaryElements.titleCard.desc.textContent = titleData.desc;
 
-            summaryElements.titleCardOverlay.style.display = 'flex'; // Show overlay
-            setTimeout(() => { // Add 'visible' class after a short delay to trigger transition
+            summaryElements.titleCardOverlay.style.display = 'flex';
+            setTimeout(() => {
                 summaryElements.titleCardOverlay.classList.add('visible');
             }, 10);
-
 
             setTimeout(() => {
                 summaryElements.titleCardOverlay.classList.remove('visible');
                 setTimeout(() => {
-                    summaryElements.titleCardOverlay.style.display = 'none'; // Hide after transition
                     currentIndex++;
                     showNextCard();
-                }, 500); // Wait for fade out transition
+                }, 500);
             }, 3500);
         }
         showNextCard();
@@ -527,7 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = 'player-item';
             const title = titles[id] ? `<span class="player-title">${titles[id].title}</span>` : '';
-            item.innerHTML = `<div>${player.name}<br>${title}</div> <span>${player.status === 'defeated' ? 'แพ้' : 'ชนะ'}</span>`;
+            item.innerHTML = `<div>${player.name}<br>${title}</div> <span>${player.name === roomData.winnerName ? 'ชนะ' : 'แพ้'}</span>`;
             summaryElements.playerList.appendChild(item);
         });
         navigateTo('summary');
@@ -549,8 +581,6 @@ document.addEventListener('DOMContentLoaded', () => {
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
             let secretNumber = '';
-            const digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-            // To ensure unique digits if needed, but for now, simple random is fine.
             for (let i = 0; i < digitCount; i++) {
                 secretNumber += Math.floor(Math.random() * 10).toString();
             }
@@ -586,18 +616,12 @@ document.addEventListener('DOMContentLoaded', () => {
     buttons.assassinate.addEventListener('click', () => handleAction(true));
     buttons.chatSend.addEventListener('click', handleSendChat);
     buttons.backToHome.addEventListener('click', () => {
-        // Reset state completely for a fresh start
-        currentPlayerId = null;
-        playerName = '';
-        sessionStorage.removeItem('playerName');
-        inputs.playerName.value = '';
         leaveRoom();
         navigateTo('home');
     });
     inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
     gameElements.keypad.addEventListener('click', handleKeypadClick);
 
-    // Modal Toggles
     historyElements.toggleBtn.addEventListener('click', () => historyElements.overlay.style.display = 'flex');
     historyElements.closeBtn.addEventListener('click', () => historyElements.overlay.style.display = 'none');
     historyElements.overlay.addEventListener('click', (e) => { if (e.target === historyElements.overlay) historyElements.overlay.style.display = 'none'; });
@@ -625,4 +649,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     navigateTo('home');
 
-}); // End of DOMContentLoaded
+});
