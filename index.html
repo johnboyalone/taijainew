@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เกมทายเลข</title>
+    <title>เกมทายเลข (รุมทาย)</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -13,8 +13,8 @@
     <!-- Page 1: Home / Welcome -->
     <div id="page-home" class="page">
         <div class="container">
-            <h1>เกมทายเลขหลายคน</h1>
-            <p>ทายเลข 4 หลักของเพื่อนให้ถูก!</p>
+            <h1>เกมทายเลข (รุมทาย)</h1>
+            <p>ทายเลข 4 หลักของเป้าหมายให้ถูก!</p>
             <input type="text" id="input-player-name" placeholder="กรอกชื่อของคุณ...">
             <button id="btn-go-to-lobby" class="btn btn-primary">เข้าสู่ล็อบบี้</button>
         </div>
@@ -59,7 +59,10 @@
 
             <!-- Gameplay Section -->
             <div id="gameplay-section" style="display: none;">
-                <h3 id="turn-indicator">ตาของ: ...</h3>
+                <!-- *** NEW: Indicators for the new game mode *** -->
+                <h4 id="target-indicator">เป้าหมายรอบนี้: ...</h4>
+                <h3 id="turn-indicator">ผู้ทาย: ...</h3>
+                
                 <div id="game-display"></div>
                 <div class="keypad">
                     <button class="key">1</button> <button class="key">2</button> <button class="key">3</button>
