@@ -15,11 +15,7 @@ const database = firebase.database();
 let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
 let isChatOpen = false;
-let hasInteracted = false;
-let isBgMusicEnabled = true;
-let isSfxEnabled = true;
-let lastAttackerId = null;
-
+let hasInteracted = false; // สำหรับเช็คการเล่นเสียงครั้งแรก
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -31,11 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
         wrong: new Audio('sounds/wrong-answer.mp3'),
         yourTurn: new Audio('sounds/your-turn.mp3')
     };
+    // ตั้งค่าเสียงพื้นหลัง
     sounds.background.loop = true;
     sounds.background.volume = 0.3;
 
+    // ฟังก์ชันกลางสำหรับเล่นเสียง
     function playSound(sound) {
-        if (!hasInteracted || !isSfxEnabled) return;
+        if (!hasInteracted) return; // ถ้าผู้ใช้ยังไม่เคยกดอะไรเลย จะยังไม่เล่นเสียง
         sound.currentTime = 0;
         sound.play().catch(e => console.log("ไม่สามารถเล่นเสียงได้:", e));
     }
@@ -127,9 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         if (!hasInteracted) {
             hasInteracted = true;
-            if (isBgMusicEnabled) {
-                sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
-            }
+            sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
         }
         const name = inputs.playerName.value.trim();
         if (!name) { alert('กรุณากรอกชื่อ'); return; }
@@ -219,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateChat(roomData.chat);
 
             const myPlayer = roomData.players[currentPlayerId];
-            
+
             if (roomData.status === 'finished') {
                 defeatedOverlay.style.display = 'none';
             } else if (myPlayer) {
@@ -230,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameElements.setupSection.style.display = myPlayer?.isReady ? 'none' : 'block';
                 gameElements.waitingSection.style.display = myPlayer?.isReady ? 'block' : 'none';
                 gameElements.gameplaySection.style.display = 'none';
-                // lastAttackerId = null; // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ลบออกจากตรงนี้
+                checkIfGameCanStart(roomData);
             } else if (roomData.status === 'playing') {
                 const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
                 if (activePlayers.length <= 1) {
@@ -275,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-        
+
         const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
         const targetPlayerId = activePlayers[currentTargetIndexInActive];
         const targetPlayerName = players[targetPlayerId].name;
@@ -295,22 +291,11 @@ document.addEventListener('DOMContentLoaded', () => {
         buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
 
         gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
-        
-        if (attackerPlayerId !== lastAttackerId) {
-            if (isMyTurn) {
-                playSound(sounds.yourTurn);
-            }
-            lastAttackerId = attackerPlayerId;
-        }
-        
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
+            playSound(sounds.yourTurn);
         }
-        
-        if (targetPlayerId === currentPlayerId) { 
-            gameElements.turn.textContent = `คุณคือเป้าหมาย!`; 
-            gameElements.turn.style.color = '#dc3545'; 
-        }
+        if (targetPlayerId === currentPlayerId) { gameElements.turn.textContent = `คุณคือเป้าหมาย!`; gameElements.turn.style.color = '#dc3545'; }
 
         gameElements.timer.style.display = 'block';
         turnTimer = setInterval(() => {
@@ -478,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSendChat() {
         const message = inputs.chat.value.trim();
         if (!message) return;
-        
+
         playSound(sounds.click);
         const chatRef = database.ref(`rooms/${currentRoomId}/chat`).push();
         chatRef.set({
@@ -526,13 +511,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- End Game Logic ---
     function endGame(roomData) {
         if (turnTimer) clearInterval(turnTimer);
-        
+
         if (roomData.winnerName !== "ไม่มีผู้ชนะ") {
             playSound(sounds.win);
         }
 
         const titles = assignTitles(roomData);
-        
+
         showTitleCards(roomData, titles, () => {
             showSummaryPage(roomData, titles);
         });
@@ -623,8 +608,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (turnTimer) clearInterval(turnTimer);
 
         playerRef = null; roomRef = null; roomListener = null; currentRoomId = null; currentInput = '';
-        lastAttackerId = null; // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ย้ายมารีเซ็ตตรงนี้
-        
+
         navigateTo('preLobby');
     }
 
@@ -670,7 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
     buttons.guess.addEventListener('click', () => handleAction(false));
     buttons.assassinate.addEventListener('click', () => handleAction(true));
     buttons.chatSend.addEventListener('click', handleSendChat);
-    
+
     buttons.backToHome.addEventListener('click', () => {
         playSound(sounds.click);
         sounds.background.pause();
@@ -712,47 +696,6 @@ document.addEventListener('DOMContentLoaded', () => {
             isChatOpen = false;
         }
     });
-
-    // Settings Modal Listeners
-    const settingsToggleBtn = document.getElementById('settings-toggle-btn');
-    const settingsOverlay = document.getElementById('settings-modal-overlay');
-    const settingsCloseBtn = document.getElementById('settings-close-btn');
-    const bgMusicToggle = document.getElementById('toggle-bg-music');
-    const sfxToggle = document.getElementById('toggle-sfx');
-
-    settingsToggleBtn.addEventListener('click', () => {
-        playSound(sounds.click);
-        settingsOverlay.style.display = 'flex';
-    });
-
-    settingsCloseBtn.addEventListener('click', () => {
-        playSound(sounds.click);
-        settingsOverlay.style.display = 'none';
-    });
-
-    settingsOverlay.addEventListener('click', (e) => {
-        if (e.target === settingsOverlay) {
-            playSound(sounds.click);
-            settingsOverlay.style.display = 'none';
-        }
-    });
-
-    bgMusicToggle.addEventListener('change', (e) => {
-        isBgMusicEnabled = e.target.checked;
-        if (isBgMusicEnabled && hasInteracted) {
-            sounds.background.play().catch(err => console.log(err));
-        } else {
-            sounds.background.pause();
-        }
-    });
-
-    sfxToggle.addEventListener('change', (e) => {
-        isSfxEnabled = e.target.checked;
-        if (isSfxEnabled) {
-            playSound(sounds.click); // เล่นเสียงคลิกเพื่อยืนยันว่าเปิดแล้ว
-        }
-    });
-
 
     // --- Initial Load ---
     const savedPlayerName = sessionStorage.getItem('playerName');
