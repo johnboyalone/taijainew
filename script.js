@@ -225,6 +225,7 @@ function leaveRoom() {
 }
 
 function listenToRoomChanges() {
+    if (roomListener) roomRef.off('value', roomListener);
     roomListener = roomRef.on('value', snapshot => {
         if (!snapshot.exists()) {
             alert('ห้องถูกปิดแล้ว');
@@ -239,7 +240,7 @@ function listenToRoomChanges() {
 // --- Game UI Updates ---
 function updateGameUI(room) {
     gameElements.roomName.textContent = `ห้อง: ${room.name}`;
-    updatePlayerList(room.players);
+    updatePlayerList(room.players, room.gameState ? room.gameState.guesses : {});
 
     const me = room.players[currentPlayerId];
     if (!me) return;
@@ -276,8 +277,10 @@ function updateGameUI(room) {
     }
 }
 
-function updatePlayerList(players) {
+function updatePlayerList(players, guesses) {
     gameElements.playerList.innerHTML = '';
+    const lastGuess = Object.values(guesses || {}).pop();
+
     Object.entries(players).forEach(([id, player]) => {
         const item = document.createElement('div');
         item.className = 'player-item';
@@ -297,7 +300,11 @@ function updatePlayerList(players) {
         }
 
         const recentGuessDiv = document.createElement('div');
-        recentGuessDiv.id = `recent-guess-${id}`;
+        recentGuessDiv.className = 'recent-guess';
+        if (lastGuess && lastGuess.playerId === id) {
+            recentGuessDiv.textContent = lastGuess.guess;
+            setTimeout(() => { recentGuessDiv.textContent = ''; }, 2000);
+        }
 
         item.appendChild(infoDiv);
         item.appendChild(recentGuessDiv);
@@ -350,7 +357,7 @@ function handleReadyUp() {
                     const playerCount = Object.keys(players).length;
                     const readyCount = Object.values(players).filter(p => p.isReady).length;
                     
-                    if (playerCount === roomData.config.maxPlayers && playerCount === readyCount) {
+                    if (playerCount >= 2 && playerCount === readyCount) {
                         startGame(roomData);
                     }
                 }
@@ -431,7 +438,7 @@ function toggleHistory() {
             table.innerHTML = `
                 <thead><tr><th colspan="2">ทาย ${entry.targetName}</th></tr></thead>
                 <tbody>
-                    ${Object.entries(entry.guesses).map(([guess, hints]) => `
+                    ${Object.entries(entry.guesses || {}).map(([guess, hints]) => `
                         <tr>
                             <td class="history-guess">${guess}</td>
                             <td><span class="hint-bull">${hints.bulls}</span> <span class="hint-cow">${hints.cows}</span></td>
@@ -522,9 +529,7 @@ function showTitleCards(players) {
         const title = getPlayerTitle(player.stats);
         
         summaryElements.titleCard.emoji.textContent = title.emoji;
-        // *** START: โค้ดที่แก้ไขแล้ว ***
         summaryElements.titleCard.name.textContent = player.name;
-        // *** END: โค้ดที่แก้ไขแล้ว ***
         summaryElements.titleCard.title.textContent = title.name;
         summaryElements.titleCard.desc.textContent = title.desc;
         
@@ -582,24 +587,19 @@ buttons.goToJoin.addEventListener('click', handleGoToJoin);
 buttons.createRoom.addEventListener('click', createRoom);
 buttons.leaveRoom.addEventListener('click', leaveRoom);
 buttons.readyUp.addEventListener('click', handleReadyUp);
+gameElements.keypad.addEventListener('click', handleKeypadClick);
 buttons.delete.addEventListener('click', handleDelete);
 buttons.guess.addEventListener('click', () => handleGuess(false));
 buttons.assassinate.addEventListener('click', () => handleGuess(true));
-buttons.chatSend.addEventListener('click', handleSendMessage);
-inputs.chat.addEventListener('keypress', e => { if (e.key === 'Enter') handleSendMessage(); });
-buttons.backToHome.addEventListener('click', () => {
-    sessionStorage.removeItem('playerId');
-    navigateTo('home');
-});
-
-gameElements.keypad.addEventListener('click', handleKeypadClick);
 historyElements.toggleBtn.addEventListener('click', toggleHistory);
 historyElements.closeBtn.addEventListener('click', () => historyElements.overlay.style.display = 'none');
 chatElements.toggleBtn.addEventListener('click', toggleChat);
-chatElements.closeBtn.addEventListener('click', toggleChat);
-
-historyElements.overlay.addEventListener('click', (e) => { if (e.target === historyElements.overlay) historyElements.overlay.style.display = 'none'; });
-chatElements.overlay.addEventListener('click', (e) => { if (e.target === chatElements.overlay) toggleChat(); });
+chatElements.closeBtn.addEventListener('click', () => {
+    chatElements.overlay.style.display = 'none';
+    isChatOpen = false;
+});
+buttons.chatSend.addEventListener('click', handleSendMessage);
+buttons.backToHome.addEventListener('click', () => navigateTo('preLobby'));
 
 // --- Initial Load ---
 document.addEventListener('DOMContentLoaded', () => {
