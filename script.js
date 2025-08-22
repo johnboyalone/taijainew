@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         turnIndicator: document.getElementById('game-turn-indicator'),
         targetIndicator: document.getElementById('game-target-indicator'),
         playerList: document.getElementById('player-list'),
-        playerListSetup: document.getElementById('player-list-setup'),
+        playerListSetup: document.querySelector('player-list-setup'),
         setupSection: document.getElementById('setup-section'),
         gameplaySection: document.getElementById('gameplay-section'),
         gameDisplay: document.getElementById('game-display'),
