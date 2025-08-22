@@ -15,7 +15,12 @@ const database = firebase.database();
 let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
 let isChatOpen = false;
-let hasInteracted = false; // สำหรับเช็คการเล่นเสียงครั้งแรก
+let hasInteracted = false;
+
+// --- Local Settings ---
+let settings = {
+    isYourTurnSoundEnabled: true
+};
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -27,13 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
         wrong: new Audio('sounds/wrong-answer.mp3'),
         yourTurn: new Audio('sounds/your-turn.mp3')
     };
-    // ตั้งค่าเสียงพื้นหลัง
     sounds.background.loop = true;
     sounds.background.volume = 0.3;
 
     // ฟังก์ชันกลางสำหรับเล่นเสียง
     function playSound(sound) {
-        if (!hasInteracted) return; // ถ้าผู้ใช้ยังไม่เคยกดอะไรเลย จะยังไม่เล่นเสียง
+        if (!hasInteracted) return;
         sound.currentTime = 0;
         sound.play().catch(e => console.log("ไม่สามารถเล่นเสียงได้:", e));
     }
@@ -101,6 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
         closeBtn: document.getElementById('chat-close-btn'),
         marqueeContainer: document.getElementById('chat-marquee-container')
     };
+    const settingsElements = {
+        toggleBtn: document.getElementById('settings-toggle-btn'),
+        overlay: document.getElementById('settings-modal-overlay'),
+        closeBtn: document.getElementById('settings-close-btn'),
+        yourTurnSoundToggle: document.getElementById('toggle-your-turn-sound')
+    };
     const summaryElements = {
         winner: document.getElementById('summary-winner'),
         playerList: document.getElementById('summary-player-list'),
@@ -113,6 +123,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     const defeatedOverlay = document.getElementById('defeated-overlay');
+
+    // --- Settings Logic ---
+    function saveSettings() {
+        localStorage.setItem('gameSettings', JSON.stringify(settings));
+    }
+
+    function loadSettings() {
+        const savedSettings = localStorage.getItem('gameSettings');
+        if (savedSettings) {
+            settings = JSON.parse(savedSettings);
+        }
+        // Update UI elements based on loaded settings
+        settingsElements.yourTurnSoundToggle.checked = settings.isYourTurnSoundEnabled;
+    }
 
     // --- Navigation ---
     function navigateTo(pageName) {
@@ -256,7 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function startGame(playerIds) {
         roomRef.update({ status: 'playing', playerOrder: playerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
     }
-
     function updateGameUI(roomData) {
         gameElements.setupSection.style.display = 'none';
         gameElements.waitingSection.style.display = 'none';
@@ -293,8 +316,10 @@ document.addEventListener('DOMContentLoaded', () => {
         gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
-            // Play sound only on the current player's device
-            playSound(sounds.yourTurn);
+            // Play sound only if it's my turn AND the setting is enabled
+            if (settings.isYourTurnSoundEnabled) {
+                playSound(sounds.yourTurn);
+            }
         }
         if (targetPlayerId === currentPlayerId) { gameElements.turn.textContent = `คุณคือเป้าหมาย!`; gameElements.turn.style.color = '#dc3545'; }
 
@@ -308,6 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updatePersonalHistory(roomData);
     }
+
     function handleAction(isAssassination) {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
@@ -689,19 +715,4 @@ document.addEventListener('DOMContentLoaded', () => {
         chatElements.overlay.style.display = 'none';
         isChatOpen = false;
     });
-    chatElements.overlay.addEventListener('click', (e) => {
-        if (e.target === chatElements.overlay) {
-            playSound(sounds.click);
-            chatElements.overlay.style.display = 'none';
-            isChatOpen = false;
-        }
-    });
-
-    // --- Initial Load ---
-    const savedPlayerName = sessionStorage.getItem('playerName');
-    if (savedPlayerName) {
-        inputs.playerName.value = savedPlayerName;
-    }
-    navigateTo('home');
-
-});
+    chat
