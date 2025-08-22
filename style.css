@@ -366,33 +366,44 @@ input[type="text"], select {
     border: 2px solid white;
 }
 
-/* Floating Chat Message */
-#floating-chat-container {
+/* Chat Marquee (ข้อความวิ่ง) */
+#chat-marquee-container {
     position: absolute;
-    bottom: 50px; 
-    right: 10px;  
-    width: 220px; 
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end; 
+    bottom: 50px;
+    right: 10px;
+    width: 250px;
+    height: 30px;
+    overflow: hidden;
     pointer-events: none;
-    z-index: 1100; 
+    z-index: 1100;
 }
-.floating-chat-bubble {
-    background-color: rgba(0,0,0,0.75);
+
+.chat-marquee-item {
+    position: absolute;
+    white-space: nowrap;
+    background-color: rgba(0, 0, 0, 0.75);
     color: white;
-    padding: 8px 12px;
-    border-radius: 10px;
-    margin-bottom: 5px;
+    padding: 5px 15px;
+    border-radius: 15px;
     font-size: 0.9rem;
-    opacity: 0;
-    animation: floatUpAndFade 4s ease-out forwards;
+    animation: marquee 7s linear forwards;
 }
-@keyframes floatUpAndFade {
-    0% { transform: translateY(10px); opacity: 0; }
-    15% { transform: translateY(0); opacity: 1; }
-    85% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(-10px); opacity: 0; }
+
+@keyframes marquee {
+    0% {
+        transform: translateX(100%);
+        opacity: 1;
+    }
+    10% {
+        transform: translateX(0);
+    }
+    90% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
 }
 
 /* --- Defeated & Summary --- */
