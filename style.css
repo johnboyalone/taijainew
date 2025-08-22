@@ -366,13 +366,15 @@ input[type="text"], select {
     border: 2px solid white;
 }
 
-/* Chat Marquee (ข้อความวิ่ง) */
+/* Chat Marquee (ข้อความวิ่งกลางจอ) */
 #chat-marquee-container {
-    position: absolute;
-    bottom: 50px;
-    right: 10px;
-    width: 250px;
-    height: 30px;
+    position: fixed; /* เปลี่ยนเป็น fixed เพื่อให้อยู่กลางจอเสมอ */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* จัดให้อยู่กึ่งกลางเป๊ะๆ */
+    width: 100%; /* ทำให้ container กว้างเต็มจอ */
+    max-width: 600px; /* แต่ไม่กว้างเกินไปบนจอใหญ่ */
+    height: 40px; /* เพิ่มความสูงเล็กน้อย */
     overflow: hidden;
     pointer-events: none;
     z-index: 1100;
@@ -381,30 +383,29 @@ input[type="text"], select {
 .chat-marquee-item {
     position: absolute;
     white-space: nowrap;
-    background-color: rgba(0, 0, 0, 0.75);
+    background-color: rgba(0, 0, 0, 0.8); /* ทำให้เข้มขึ้นเล็กน้อย */
     color: white;
-    padding: 5px 15px;
-    border-radius: 15px;
-    font-size: 0.9rem;
-    animation: marquee 7s linear forwards;
+    padding: 8px 20px; /* เพิ่ม padding ให้ดูใหญ่ขึ้น */
+    border-radius: 20px;
+    font-size: 1.1rem; /* เพิ่มขนาดฟอนต์ */
+    font-weight: 600;
+    animation: marquee-center 6s linear forwards; /* เรียกใช้ animation ใหม่ */
 }
 
-@keyframes marquee {
+/* Keyframe ใหม่สำหรับวิ่งจากขวาไปซ้ายผ่านกลางจอ */
+@keyframes marquee-center {
     0% {
-        transform: translateX(100%);
+        /* เริ่มจากนอกจอฝั่งขวา */
+        transform: translateX(150%);
         opacity: 1;
     }
-    10% {
-        transform: translateX(0);
-    }
-    90% {
-        transform: translateX(0);
-    }
     100% {
-        transform: translateX(-100%);
-        opacity: 0;
+        /* วิ่งไปจนสุดจอด้านซ้าย */
+        transform: translateX(-150%);
+        opacity: 1;
     }
 }
+
 
 /* --- Defeated & Summary --- */
 #defeated-overlay {
