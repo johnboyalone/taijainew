@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เกมทายเลขมหาประลัย</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Firebase Scripts -->
+    <!-- โค้ดที่จำเป็นและถูกนำกลับมาแล้ว -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
@@ -85,7 +85,7 @@
         <div class="game-header">
             <h2 id="game-room-name">ห้อง: ...</h2>
             <div class="game-header-buttons">
-                <!-- เปลี่ยนเป็น Marquee Container -->
+                <button id="settings-toggle-btn" class="btn-icon">⚙️</button> <!-- ปุ่มตั้งค่าที่เพิ่มเข้ามา -->
                 <div id="chat-marquee-container"></div>
                 <button id="history-toggle-btn" class="btn-icon">📜</button>
                 <button id="chat-toggle-btn" class="btn-icon">
@@ -101,7 +101,7 @@
         <!-- ส่วนตั้งค่าเลขลับ -->
         <div id="setup-section" class="game-section">
             <h3>ถึงเวลาตั้งเลขลับของคุณ!</h3>
-            <p>กรุณากด "พร้อมแล้ว!" เพื่อให้ระบบสุ่มเลขให้</p>
+            <p>ระบบจะสุ่มเลขให้โดยอัตโนมัติ</p>
             <button id="btn-ready-up" class="btn btn-primary">พร้อมแล้ว!</button>
         </div>
 
@@ -161,21 +161,37 @@
         </div>
     </div>
 
+    <!-- Pop-up ตั้งค่า (ที่เพิ่มเข้ามาใหม่) -->
+    <div id="settings-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>ตั้งค่าเสียง</h3>
+                <button id="settings-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div id="settings-modal-body">
+                <div class="setting-item">
+                    <label for="toggle-bg-music">เพลงพื้นหลัง</label>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-bg-music" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label for="toggle-sfx">เอฟเฟกต์เสียง</label>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-sfx" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- หน้าจอสำหรับผู้เล่นที่แพ้ -->
     <div id="defeated-overlay" style="display: none;">
         <div class="defeated-content">
             <h1>คุณถูกกำจัดแล้ว</h1>
             <p>แต่ยังสามารถดูเพื่อนเล่นและแชทได้</p>
-        </div>
-    </div>
-
-    <!-- การ์ดฉายา (และใช้แสดงผู้ชนะด้วย) -->
-    <div id="title-card-overlay" style="display: none;">
-        <div id="title-card">
-            <div id="title-card-emoji"></div>
-            <h2 id="title-card-name"></h2>
-            <h3 id="title-card-title"></h3>
-            <p id="title-card-desc"></p>
         </div>
     </div>
 
@@ -187,6 +203,16 @@
             <div id="summary-player-list"></div>
             <button id="btn-play-again" class="btn btn-success">เล่นอีกครั้ง</button>
             <button id="btn-back-to-home" class="btn btn-secondary">กลับไปหน้าแรก</button>
+        </div>
+    </div>
+
+    <!-- การ์ดฉายา -->
+    <div id="title-card-overlay" style="display: none;">
+        <div id="title-card">
+            <div id="title-card-emoji"></div>
+            <h2 id="title-card-name"></h2>
+            <h3 id="title-card-title"></h3>
+            <p id="title-card-desc"></p>
         </div>
     </div>
 
