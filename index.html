@@ -17,7 +17,6 @@
             <button id="btn-open-settings-home" class="btn-icon btn-settings">⚙️</button>
             <h1>เกมทายเลข<br>มหาประลัย</h1>
             <p>ใส่ชื่อของคุณเพื่อเริ่มเล่น</p>
-            <!-- แก้ไข: แยก input และ button ออกจากกัน -->
             <input type="text" id="input-player-name" placeholder="ชื่อผู้เล่น..." maxlength="12">
             <button id="btn-go-to-pre-lobby" class="btn btn-primary">ไปต่อ</button>
         </div>
@@ -84,144 +83,97 @@
         </div>
     </div>
 
-    <!-- หน้าเกม -->
-    <div id="page-game" class="page game-layout" style="display: none;">
-        <div class="game-main-column">
-            <!-- ส่วนตั้งค่าเลขลับ -->
-            <div id="setup-section" class="game-card">
+    <!-- หน้าเกม (แก้ไขโครงสร้างใหม่ทั้งหมด) -->
+    <div id="page-game" class="page" style="display: none;">
+        
+        <!-- ส่วนตั้งค่าเลขลับ -->
+        <div id="setup-section" class="game-container">
+            <div class="game-card">
                 <h3>ถึงเวลาตั้งเลขลับของคุณ!</h3>
                 <p>กรุณากด "พร้อมแล้ว!" เพื่อให้ระบบสุ่มเลขให้</p>
-                <!-- แก้ไข: เพิ่ม list ผู้เล่นในห้องรอ -->
                 <div id="player-list-waiting" class="player-list-setup"></div>
                 <button id="btn-ready-up" class="btn btn-primary">พร้อมแล้ว!</button>
                 <button id="btn-leave-room-setup" class="btn btn-secondary">ออกจากห้อง</button>
             </div>
+        </div>
 
-            <!-- ส่วนรอผู้เล่นอื่น -->
-            <div id="waiting-section" class="game-card" style="display: none;">
+        <!-- ส่วนรอผู้เล่นอื่น -->
+        <div id="waiting-section" class="game-container" style="display: none;">
+             <div class="game-card">
                 <h3>กำลังรอผู้เล่นคนอื่น...</h3>
                 <div class="spinner"></div>
-                <!-- แก้ไข: เพิ่ม list ผู้เล่นในห้องรอ -->
                 <div id="player-list-waiting-2" class="player-list-setup"></div>
             </div>
-
-            <!-- ส่วนการเล่นเกม -->
-            <div id="gameplay-section" style="display: none;">
-                <div class="game-header-main">
-                    <h2 id="game-turn-indicator">ถึงตาคุณแล้ว!</h2>
-                    <!-- แก้ไข: นำปุ่มประวัติและแชทกลับมา -->
-                    <div class="game-header-buttons">
-                        <button id="history-toggle-btn" class="btn-icon">📜</button>
-                        <button id="chat-toggle-btn" class="btn-icon">
-                            💬<span id="chat-unread-indicator" style="display: none;"></span>
-                        </button>
-                    </div>
-                </div>
-                <p id="game-target-indicator">เป้าหมาย: ...</p>
-
-                <div id="player-list-container">
-                    <div id="attack-animation-container"></div>
-                    <div id="player-list"></div>
-                </div>
-
-                <div class="game-card" id="my-secret-number-display">
-                    <p>เลขลับของคุณ</p>
-                    <span id="my-secret-number-text">????</span>
-                </div>
-
-                <div class="game-card" id="guess-area">
-                    <div id="timer-bar-container"><div id="timer-bar"></div></div>
-                    <div id="game-display">----</div>
-                </div>
-
-                <div class="keypad" id="game-keypad">
-                    <button class="key">1</button> <button class="key">2</button> <button class="key">3</button>
-                    <button class="key">4</button> <button class="key">5</button> <button class="key">6</button>
-                    <button class="key">7</button> <button class="key">8</button> <button class="key">9</button>
-                    <button id="btn-delete" class="key key-special">ลบ</button>
-                    <button class="key">0</button>
-                    <button id="btn-guess" class="key key-action">ทาย</button>
-                </div>
-                <button id="btn-assassinate" class="btn btn-danger">ตุยเย่!</button>
-            </div>
         </div>
-        <div class="game-sidebar-column">
+
+        <!-- ส่วนการเล่นเกม -->
+        <div id="gameplay-section" class="game-container" style="display: none;">
+            <div class="game-header-main">
+                <h2 id="game-turn-indicator">ถึงตาคุณแล้ว!</h2>
+                <div class="game-header-buttons">
+                    <button id="history-toggle-btn" class="btn-icon">📜</button>
+                    <button id="chat-toggle-btn" class="btn-icon">
+                        💬<span id="chat-unread-indicator" style="display: none;"></span>
+                    </button>
+                </div>
+            </div>
+            <p id="game-target-indicator">เป้าหมาย: ...</p>
+
+            <div id="player-list-container">
+                <div id="attack-animation-container"></div>
+                <div id="player-list"></div>
+            </div>
+
+            <div class="game-card" id="my-secret-number-display">
+                <p>เลขลับของคุณ</p>
+                <span id="my-secret-number-text">????</span>
+            </div>
+
+            <div class="game-card" id="guess-area">
+                <div id="timer-bar-container"><div id="timer-bar"></div></div>
+                <div id="game-display">----</div>
+            </div>
+
+            <div class="keypad" id="game-keypad">
+                <button class="key">1</button> <button class="key">2</button> <button class="key">3</button>
+                <button class="key">4</button> <button class="key">5</button> <button class="key">6</button>
+                <button class="key">7</button> <button class="key">8</button> <button class="key">9</button>
+                <button id="btn-delete" class="key key-special">ลบ</button>
+                <button class="key">0</button>
+                <button id="btn-guess" class="key key-action">ทาย</button>
+            </div>
+            <!-- นำปุ่มตุยเย่กลับมา และเพิ่มปุ่มออกจากห้องที่นี่ -->
+            <button id="btn-assassinate" class="btn btn-danger">ตุยเย่!</button>
             <button id="btn-leave-room" class="btn btn-secondary">ออกจากห้อง</button>
         </div>
     </div>
 
-    <!-- Pop-up ตั้งค่า -->
+    <!-- Pop-up ทั้งหมด (ไม่มีการเปลี่ยนแปลง) -->
     <div id="settings-modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>ตั้งค่า</h3>
-                <button id="settings-close-btn" class="close-btn">&times;</button>
-            </div>
+            <div class="modal-header"><h3>ตั้งค่า</h3><button id="settings-close-btn" class="close-btn">&times;</button></div>
             <div class="settings-body">
-                <div class="setting-item">
-                    <label for="toggle-bgm">เพลงพื้นหลัง</label>
-                    <label class="switch">
-                        <input type="checkbox" id="toggle-bgm">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label for="toggle-sfx">เอฟเฟกต์เสียง</label>
-                    <label class="switch">
-                        <input type="checkbox" id="toggle-sfx">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
+                <div class="setting-item"><label for="toggle-bgm">เพลงพื้นหลัง</label><label class="switch"><input type="checkbox" id="toggle-bgm"><span class="slider round"></span></label></div>
+                <div class="setting-item"><label for="toggle-sfx">เอฟเฟกต์เสียง</label><label class="switch"><input type="checkbox" id="toggle-sfx"><span class="slider round"></span></label></div>
             </div>
         </div>
     </div>
-
-    <!-- Pop-up ประวัติ -->
     <div id="history-modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>ประวัติการทายของคุณ</h3>
-                <button id="history-close-btn" class="close-btn">&times;</button>
-            </div>
+            <div class="modal-header"><h3>ประวัติการทายของคุณ</h3><button id="history-close-btn" class="close-btn">&times;</button></div>
             <div id="history-modal-body"></div>
         </div>
     </div>
-
-    <!-- Pop-up แชท -->
     <div id="chat-modal-overlay" class="modal-overlay" style="display: none;">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>แชทในห้อง</h3>
-                <button id="chat-close-btn" class="close-btn">&times;</button>
-            </div>
-            <div id="chat-modal-body">
-                <div id="chat-messages"></div>
-            </div>
-            <div class="chat-input-area">
-                <input type="text" id="chat-input" placeholder="พิมพ์ข้อความ...">
-                <button id="chat-send-btn">ส่ง</button>
-            </div>
+            <div class="modal-header"><h3>แชทในห้อง</h3><button id="chat-close-btn" class="close-btn">&times;</button></div>
+            <div id="chat-modal-body"><div id="chat-messages"></div></div>
+            <div class="chat-input-area"><input type="text" id="chat-input" placeholder="พิมพ์ข้อความ..."><button id="chat-send-btn">ส่ง</button></div>
         </div>
     </div>
-
-    <!-- หน้าจอสำหรับผู้เล่นที่แพ้ -->
-    <div id="defeated-overlay" style="display: none;">
-        <div class="defeated-content">
-            <h1>คุณถูกกำจัดแล้ว</h1>
-            <p>แต่ยังสามารถดูเพื่อนเล่นและแชทได้</p>
-        </div>
-    </div>
-
-    <!-- การ์ดฉายา -->
-    <div id="title-card-overlay" style="display: none;">
-        <div id="title-card">
-            <div id="title-card-emoji"></div>
-            <h2 id="title-card-name"></h2>
-            <h3 id="title-card-title"></h3>
-            <p id="title-card-desc"></p>
-        </div>
-    </div>
-
+    <div id="defeated-overlay" style="display: none;"><div class="defeated-content"><h1>คุณถูกกำจัดแล้ว</h1><p>แต่ยังสามารถดูเพื่อนเล่นและแชทได้</p></div></div>
+    <div id="title-card-overlay" style="display: none;"><div id="title-card"><div id="title-card-emoji"></div><h2 id="title-card-name"></h2><h3 id="title-card-title"></h3><p id="title-card-desc"></p></div></div>
+    
     <!-- หน้าสรุปผลเกม -->
     <div id="page-summary" class="page" style="display: none;">
         <div class="card">
