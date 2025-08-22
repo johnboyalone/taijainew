@@ -15,12 +15,15 @@ const database = firebase.database();
 let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
 let isChatOpen = false;
-let hasInteracted = false;
+let hasInteracted = false; // สำหรับเช็คการเล่นเสียงครั้งแรก
 
-// --- Local Settings ---
-let settings = {
-    isYourTurnSoundEnabled: true
+// --- Sound Settings State ---
+let soundSettings = {
+    bgm: true,
+    sfx: true,
+    yourTurn: true
 };
+
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -32,12 +35,19 @@ document.addEventListener('DOMContentLoaded', () => {
         wrong: new Audio('sounds/wrong-answer.mp3'),
         yourTurn: new Audio('sounds/your-turn.mp3')
     };
+    // ตั้งค่าเสียงพื้นหลัง
     sounds.background.loop = true;
     sounds.background.volume = 0.3;
 
     // ฟังก์ชันกลางสำหรับเล่นเสียง
-    function playSound(sound) {
+    function playSound(sound, type = 'sfx') {
         if (!hasInteracted) return;
+
+        // ตรวจสอบการตั้งค่าก่อนเล่น
+        if (type === 'bgm' && !soundSettings.bgm) return;
+        if (type === 'sfx' && !soundSettings.sfx) return;
+        if (type === 'yourTurn' && !soundSettings.yourTurn) return;
+
         sound.currentTime = 0;
         sound.play().catch(e => console.log("ไม่สามารถเล่นเสียงได้:", e));
     }
@@ -105,11 +115,14 @@ document.addEventListener('DOMContentLoaded', () => {
         closeBtn: document.getElementById('chat-close-btn'),
         marqueeContainer: document.getElementById('chat-marquee-container')
     };
+    // เพิ่ม Settings Elements
     const settingsElements = {
         toggleBtn: document.getElementById('settings-toggle-btn'),
         overlay: document.getElementById('settings-modal-overlay'),
         closeBtn: document.getElementById('settings-close-btn'),
-        yourTurnSoundToggle: document.getElementById('toggle-your-turn-sound')
+        bgmToggle: document.getElementById('toggle-bgm'),
+        sfxToggle: document.getElementById('toggle-sfx'),
+        yourTurnToggle: document.getElementById('toggle-your-turn')
     };
     const summaryElements = {
         winner: document.getElementById('summary-winner'),
@@ -124,20 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const defeatedOverlay = document.getElementById('defeated-overlay');
 
-    // --- Settings Logic ---
-    function saveSettings() {
-        localStorage.setItem('gameSettings', JSON.stringify(settings));
-    }
-
-    function loadSettings() {
-        const savedSettings = localStorage.getItem('gameSettings');
-        if (savedSettings) {
-            settings = JSON.parse(savedSettings);
-        }
-        // Update UI elements based on loaded settings
-        settingsElements.yourTurnSoundToggle.checked = settings.isYourTurnSoundEnabled;
-    }
-
     // --- Navigation ---
     function navigateTo(pageName) {
         Object.values(pages).forEach(p => p.style.display = 'none');
@@ -146,11 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Lobby Logic ---
     function handleGoToPreLobby() {
-        playSound(sounds.click);
         if (!hasInteracted) {
             hasInteracted = true;
-            sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
+            playSound(sounds.background, 'bgm');
         }
+        playSound(sounds.click);
         const name = inputs.playerName.value.trim();
         if (!name) { alert('กรุณากรอกชื่อ'); return; }
         playerName = name;
@@ -268,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
     function checkIfGameCanStart(roomData) {
         const players = roomData.players || {};
         const playerIds = Object.keys(players);
@@ -280,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startGame(playerIds) {
         roomRef.update({ status: 'playing', playerOrder: playerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
     }
+
     function updateGameUI(roomData) {
         gameElements.setupSection.style.display = 'none';
         gameElements.waitingSection.style.display = 'none';
@@ -316,10 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
-            // Play sound only if it's my turn AND the setting is enabled
-            if (settings.isYourTurnSoundEnabled) {
-                playSound(sounds.yourTurn);
-            }
+            playSound(sounds.yourTurn, 'yourTurn');
         }
         if (targetPlayerId === currentPlayerId) { gameElements.turn.textContent = `คุณคือเป้าหมาย!`; gameElements.turn.style.color = '#dc3545'; }
 
@@ -669,6 +665,29 @@ document.addEventListener('DOMContentLoaded', () => {
         gameElements.gameDisplay.textContent = currentInput;
     }
 
+    // --- Sound Settings Logic ---
+    function saveSoundSettings() {
+        localStorage.setItem('soundSettings', JSON.stringify(soundSettings));
+    }
+
+    function loadSoundSettings() {
+        const savedSettings = localStorage.getItem('soundSettings');
+        if (savedSettings) {
+            soundSettings = JSON.parse(savedSettings);
+        }
+        // Update UI to match loaded settings
+        settingsElements.bgmToggle.checked = soundSettings.bgm;
+        settingsElements.sfxToggle.checked = soundSettings.sfx;
+        settingsElements.yourTurnToggle.checked = soundSettings.yourTurn;
+
+        // Apply BGM setting immediately
+        if (soundSettings.bgm && hasInteracted) {
+            sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
+        } else {
+            sounds.background.pause();
+        }
+    }
+
     // --- Event Listeners ---
     buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
     buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
@@ -690,29 +709,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     buttons.playAgain.addEventListener('click', () => {
-        playSound(sounds.click);
-        navigateTo('preLobby');
-    });
-
-    inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
-    gameElements.keypad.addEventListener('click', handleKeypadClick);
-
-    historyElements.toggleBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'flex'; });
-    historyElements.closeBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'none'; });
-    historyElements.overlay.addEventListener('click', (e) => { if (e.target === historyElements.overlay) { playSound(sounds.click); historyElements.overlay.style.display = 'none'; } });
-
-    chatElements.toggleBtn.addEventListener('click', () => {
-        playSound(sounds.click);
-        chatElements.overlay.style.display = 'flex';
-        chatElements.unreadIndicator.style.display = 'none';
-        isChatOpen = true;
-        setTimeout(() => {
-            chatElements.body.scrollTop = chatElements.body.scrollHeight;
-        }, 0);
-    });
-    chatElements.closeBtn.addEventListener('click', () => {
-        playSound(sounds.click);
-        chatElements.overlay.style.display = 'none';
-        isChatOpen = false;
-    });
-    chat
+        
