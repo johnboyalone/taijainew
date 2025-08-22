@@ -14,14 +14,16 @@ const database = firebase.database();
 // --- Global State ---
 let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
+let isChatOpen = false;
 
 // --- DOM Elements ---
 const pages = { home: document.getElementById('page-home'), lobby: document.getElementById('page-lobby'), game: document.getElementById('page-game') };
-const inputs = { playerName: document.getElementById('input-player-name'), roomName: document.getElementById('input-room-name'), maxPlayers: document.getElementById('input-max-players'), digitCount: document.getElementById('input-digit-count'), turnTime: document.getElementById('input-turn-time') };
-const buttons = { goToLobby: document.getElementById('btn-go-to-lobby'), createRoom: document.getElementById('btn-create-room'), leaveRoom: document.getElementById('btn-leave-room'), readyUp: document.getElementById('btn-ready-up'), delete: document.getElementById('btn-delete'), guess: document.getElementById('btn-guess') };
+const inputs = { playerName: document.getElementById('input-player-name'), roomName: document.getElementById('input-room-name'), maxPlayers: document.getElementById('input-max-players'), digitCount: document.getElementById('input-digit-count'), turnTime: document.getElementById('input-turn-time'), chat: document.getElementById('chat-input') };
+const buttons = { goToLobby: document.getElementById('btn-go-to-lobby'), createRoom: document.getElementById('btn-create-room'), leaveRoom: document.getElementById('btn-leave-room'), readyUp: document.getElementById('btn-ready-up'), delete: document.getElementById('btn-delete'), guess: document.getElementById('btn-guess'), chatSend: document.getElementById('chat-send-btn') };
 const lobbyElements = { playerName: document.getElementById('lobby-player-name'), roomListContainer: document.getElementById('room-list-container') };
-const gameElements = { roomName: document.getElementById('game-room-name'), playerList: document.getElementById('player-list'), setupSection: document.getElementById('setup-section'), waitingSection: document.getElementById('waiting-section'), gameplaySection: document.getElementById('gameplay-section'), gameDisplay: document.getElementById('game-display'), keypad: document.querySelector('.keypad'), timer: document.getElementById('timer-indicator'), target: document.getElementById('target-indicator'), turn: document.getElementById('turn-indicator'), guessLog: document.getElementById('guess-log') };
-const historyElements = { container: document.getElementById('history-popup-container'), summary: document.getElementById('history-summary'), overlay: document.getElementById('history-modal-overlay'), content: document.getElementById('history-modal-content'), closeBtn: document.getElementById('history-close-btn') };
+const gameElements = { roomName: document.getElementById('game-room-name'), playerList: document.getElementById('player-list'), setupSection: document.getElementById('setup-section'), waitingSection: document.getElementById('waiting-section'), gameplaySection: document.getElementById('gameplay-section'), gameDisplay: document.getElementById('game-display'), keypad: document.querySelector('.keypad'), timer: document.getElementById('timer-indicator'), target: document.getElementById('target-indicator'), turn: document.getElementById('turn-indicator'), mySecretNumber: document.querySelector('#my-secret-number-display span') };
+const historyElements = { toggleBtn: document.getElementById('history-toggle-btn'), overlay: document.getElementById('history-modal-overlay'), body: document.getElementById('history-modal-body'), closeBtn: document.getElementById('history-close-btn') };
+const chatElements = { toggleBtn: document.getElementById('chat-toggle-btn'), unreadIndicator: document.getElementById('chat-unread-indicator'), overlay: document.getElementById('chat-modal-overlay'), body: document.getElementById('chat-modal-body'), messages: null, closeBtn: document.getElementById('chat-close-btn') };
 
 // --- Navigation ---
 function navigateTo(pageName) { Object.values(pages).forEach(p => p.style.display = 'none'); if (pages[pageName]) pages[pageName].style.display = 'block'; }
@@ -97,7 +99,8 @@ function listenToRoomUpdates() {
     roomListener = roomRef.on('value', snapshot => {
         if (!snapshot.exists()) { alert('ห้องถูกปิดแล้ว'); leaveRoom(); return; }
         const roomData = snapshot.val();
-        updatePlayerList(roomData.players);
+        updatePlayerList(roomData);
+        updateChat(roomData.chat);
         if (roomData.status === 'waiting') checkIfGameCanStart(roomData);
         else if (roomData.status === 'playing' || roomData.status === 'finished') updateGameUI(roomData);
     });
@@ -112,18 +115,23 @@ function checkIfGameCanStart(roomData) {
 }
 
 function startGame(playerIds) {
-    roomRef.update({ status: 'playing', playerOrder: playerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, guessHistory: [], turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+    roomRef.update({ status: 'playing', playerOrder: playerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
 }
 
 function updateGameUI(roomData) {
     gameElements.setupSection.style.display = 'none';
     gameElements.waitingSection.style.display = 'none';
     gameElements.gameplaySection.style.display = 'block';
-    historyElements.container.style.display = 'block';
 
     if (turnTimer) clearInterval(turnTimer);
 
     const { playerOrder, players, targetPlayerIndex, attackerTurnIndex, status, config, turnStartTime } = roomData;
+    
+    // Show my secret number
+    if (players[currentPlayerId] && players[currentPlayerId].secretNumber) {
+        gameElements.mySecretNumber.textContent = players[currentPlayerId].secretNumber;
+    }
+
     const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
     
     if (activePlayers.length <= 1 && status === 'playing') {
@@ -137,7 +145,6 @@ function updateGameUI(roomData) {
         gameElements.target.textContent = `เกมจบแล้ว!`;
         gameElements.turn.textContent = `${roomData.winnerName} คือผู้ชนะ!`;
         gameElements.keypad.classList.add('disabled');
-        historyElements.container.style.display = 'none';
         return;
     }
 
@@ -168,8 +175,7 @@ function updateGameUI(roomData) {
         if (remaining <= 0) { clearInterval(turnTimer); if (isMyTurn) handleTimeOut(attackerPlayerId); }
     }, 500);
 
-    updateGuessLog(roomData.guessHistory, players);
-    updatePersonalHistory(roomData, targetPlayerId);
+    updatePersonalHistory(roomData);
 }
 
 function handleTimeOut(timedOutPlayerId) {
@@ -196,10 +202,11 @@ function handleGuess() {
         const targetPlayer = players[targetPlayerId];
 
         const { bulls, cows } = calculateHints(currentInput, targetPlayer.secretNumber);
-        const newLog = { attackerId: currentPlayerId, targetId: targetPlayerId, guess: currentInput, bulls, cows };
-        const newHistory = roomData.guessHistory ? [...roomData.guessHistory, newLog] : [newLog];
+        
+        let updates = {};
+        updates[`/players/${currentPlayerId}/lastGuess`] = { guess: currentInput, timestamp: firebase.database.ServerValue.TIMESTAMP };
+        updates[`/guessHistory/${database.ref().push().key}`] = { attackerId: currentPlayerId, targetId: targetPlayerId, guess: currentInput, bulls, cows };
 
-        let updates = { guessHistory: newHistory };
         if (bulls === config.digitCount) {
             updates[`/players/${targetPlayerId}/status`] = 'defeated';
             updates[`/players/${targetPlayerId}/hp`] = 0;
@@ -244,56 +251,36 @@ function calculateHints(guess, secret) {
 }
 
 // --- UI Updates ---
-function updatePlayerList(players) {
+function updatePlayerList(roomData) {
+    const { players } = roomData;
     gameElements.playerList.innerHTML = '';
     if (!players) return;
     Object.entries(players).forEach(([id, player]) => {
         const item = document.createElement('div');
         item.className = 'player-item';
         if (player.status === 'defeated') item.classList.add('player-defeated');
-        const nameSpan = `<span>${player.name}</span>`;
+        
         const hpBar = `<div class="hp-bar">${[...Array(3)].map((_, i) => `<div class="hp-point ${i < player.hp ? '' : 'lost'}"></div>`).join('')}</div>`;
         const readyStatus = player.isReady ? `<span class="btn-ready">READY</span>` : '';
-        item.innerHTML = `${nameSpan} ${player.isReady ? hpBar : readyStatus}`;
+        
+        let recentGuessHTML = '';
+        if (player.lastGuess && (Date.now() - player.lastGuess.timestamp < 3000)) {
+            recentGuessHTML = `<span class="recent-guess">${player.lastGuess.guess}</span>`;
+        }
+
+        item.innerHTML = `<div class="player-info"><span>${player.name}</span> ${recentGuessHTML}</div> ${player.isReady ? hpBar : readyStatus}`;
         if (player.status === 'defeated' && item.querySelector('.hp-bar')) item.querySelector('.hp-bar').style.display = 'none';
         gameElements.playerList.appendChild(item);
     });
 }
 
-function updateGuessLog(history, players) {
-    gameElements.guessLog.innerHTML = '';
-    if (!history) return;
-    history.forEach(log => {
-        const item = document.createElement('div');
-        item.className = 'log-item';
-        const attackerName = players[log.attackerId] ? players[log.attackerId].name : 'Unknown';
-        const hints = `<span class="hint-bull" title="ถูกตำแหน่ง">${log.bulls}</span> <span class="hint-cow" title="ถูกเลขผิดตำแหน่ง">${log.cows}</span>`;
-        item.innerHTML = `${attackerName} ทาย <b>${log.guess}</b> -> ${hints}`;
-        gameElements.guessLog.prepend(item);
-    });
-}
-
-function updatePersonalHistory(roomData, currentTargetId) {
+function updatePersonalHistory(roomData) {
     const { players, guessHistory } = roomData;
     if (!guessHistory || !players) return;
 
-    const myGuesses = guessHistory.filter(log => log.attackerId === currentPlayerId);
+    const myGuesses = Object.values(guessHistory).filter(log => log.attackerId === currentPlayerId);
     
-    // Update Summary
-    const currentTargetPlayer = players[currentTargetId];
-    if (currentTargetPlayer) {
-        const lastGuessOnTarget = myGuesses.filter(log => log.targetId === currentTargetId).pop();
-        if (lastGuessOnTarget) {
-            historyElements.summary.innerHTML = `ทาย '${currentTargetPlayer.name}': <b>${lastGuessOnTarget.guess}</b> -> <span class="hint-bull">${lastGuessOnTarget.bulls}</span> <span class="hint-cow">${lastGuessOnTarget.cows}</span>`;
-        } else {
-            historyElements.summary.innerHTML = `ยังไม่ได้ทาย '${currentTargetPlayer.name}'`;
-        }
-    } else {
-        historyElements.summary.innerHTML = 'ประวัติส่วนตัว';
-    }
-
-    // Update Modal Content
-    historyElements.content.innerHTML = '';
+    historyElements.body.innerHTML = '';
     const myGuessesByTarget = myGuesses.reduce((acc, log) => {
         if (!acc[log.targetId]) acc[log.targetId] = [];
         acc[log.targetId].push(log);
@@ -310,27 +297,53 @@ function updatePersonalHistory(roomData, currentTargetId) {
             sectionHTML += `<div class="log-item"><span><b>${log.guess}</b></span> <span>${hints}</span></div>`;
         });
         section.innerHTML = sectionHTML;
-        historyElements.content.appendChild(section);
+        historyElements.body.appendChild(section);
     });
 }
 
+// --- Chat Logic ---
+function handleSendChat() {
+    const message = inputs.chat.value.trim();
+    if (!message) return;
+    const chatRef = database.ref(`rooms/${currentRoomId}/chat`).push();
+    chatRef.set({
+        senderId: currentPlayerId,
+        senderName: playerName,
+        text: message,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    });
+    inputs.chat.value = '';
+}
+
+function updateChat(chatData) {
+    if (!chatData) return;
+    if (!isChatOpen) chatElements.unreadIndicator.style.display = 'block';
+    
+    const chatMessagesContainer = document.createElement('div');
+    chatMessagesContainer.id = 'chat-messages';
+    
+    Object.values(chatData).sort((a, b) => a.timestamp - b.timestamp).forEach(msg => {
+        const item = document.createElement('div');
+        item.className = 'chat-message';
+        item.classList.add(msg.senderId === currentPlayerId ? 'mine' : 'theirs');
+        item.innerHTML = `<div class="sender">${msg.senderName}</div><div>${msg.text}</div>`;
+        chatMessagesContainer.appendChild(item);
+    });
+    chatElements.body.innerHTML = '';
+    chatElements.body.appendChild(chatMessagesContainer);
+}
+
+// --- General Functions ---
 function leaveRoom() {
     if (playerRef) playerRef.remove();
     if (roomRef && roomListener) roomRef.off('value', roomListener);
     if (turnTimer) clearInterval(turnTimer);
     
-    playerRef = null;
-    roomRef = null;
-    roomListener = null;
-    currentRoomId = null;
-    currentInput = '';
+    playerRef = null; roomRef = null; roomListener = null; currentRoomId = null; currentInput = '';
     
     gameElements.gameplaySection.style.display = 'none';
     gameElements.setupSection.style.display = 'block';
     gameElements.waitingSection.style.display = 'none';
-    historyElements.container.style.display = 'none';
-    gameElements.guessLog.innerHTML = '';
-    gameElements.playerList.innerHTML = '';
     
     navigateTo('lobby');
 }
@@ -371,25 +384,34 @@ buttons.leaveRoom.addEventListener('click', leaveRoom);
 buttons.readyUp.addEventListener('click', handleReadyUp);
 buttons.delete.addEventListener('click', handleDelete);
 buttons.guess.addEventListener('click', handleGuess);
+buttons.chatSend.addEventListener('click', handleSendChat);
+inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
 gameElements.keypad.addEventListener('click', handleKeypadClick);
 
-historyElements.summary.addEventListener('click', () => {
-    historyElements.overlay.style.display = 'flex';
+// Modal Toggles
+historyElements.toggleBtn.addEventListener('click', () => historyElements.overlay.style.display = 'flex');
+historyElements.closeBtn.addEventListener('click', () => historyElements.overlay.style.display = 'none');
+historyElements.overlay.addEventListener('click', (e) => { if (e.target === historyElements.overlay) historyElements.overlay.style.display = 'none'; });
+
+chatElements.toggleBtn.addEventListener('click', () => {
+    chatElements.overlay.style.display = 'flex';
+    chatElements.unreadIndicator.style.display = 'none';
+    isChatOpen = true;
 });
-historyElements.closeBtn.addEventListener('click', () => {
-    historyElements.overlay.style.display = 'none';
+chatElements.closeBtn.addEventListener('click', () => {
+    chatElements.overlay.style.display = 'none';
+isChatOpen = false;
 });
-historyElements.overlay.addEventListener('click', (e) => {
-    if (e.target === historyElements.overlay) {
-        historyElements.overlay.style.display = 'none';
+chatElements.overlay.addEventListener('click', (e) => {
+    if (e.target === chatElements.overlay) {
+        chatElements.overlay.style.display = 'none';
+        isChatOpen = false;
     }
 });
 
 // --- Initial Load ---
 document.addEventListener('DOMContentLoaded', () => {
     const savedPlayerName = sessionStorage.getItem('playerName');
-    if (savedPlayerName) {
-        inputs.playerName.value = savedPlayerName;
-    }
+    if (savedPlayerName) inputs.playerName.value = savedPlayerName;
     navigateTo('home');
 });
