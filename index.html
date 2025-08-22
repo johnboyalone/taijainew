@@ -44,7 +44,13 @@
     <!-- Page: Game -->
     <div id="page-game" class="page" style="display: none;">
         <div class="container">
-            <h2 id="game-room-name">ห้อง: ...</h2>
+            <div class="game-header">
+                <h2 id="game-room-name">ห้อง: ...</h2>
+                <div class="game-header-buttons">
+                    <button id="history-toggle-btn" class="header-icon-btn">📜</button>
+                    <button id="chat-toggle-btn" class="header-icon-btn">💬<span id="chat-unread-indicator" style="display: none;"></span></button>
+                </div>
+            </div>
             
             <!-- Setup Section -->
             <div id="setup-section">
@@ -61,6 +67,7 @@
 
             <!-- Gameplay Section -->
             <div id="gameplay-section" style="display: none;">
+                <div id="my-secret-number-display">เลขลับของคุณ: <span>- - - -</span></div>
                 <div id="player-list"></div>
                 <div class="game-status">
                     <div id="timer-indicator">30</div>
@@ -74,26 +81,33 @@
                     <button class="key">7</button> <button class="key">8</button> <button class="key">9</button>
                     <button class="key" id="btn-delete">ลบ</button> <button class="key">0</button> <button class="key btn-guess" id="btn-guess">ทาย</button>
                 </div>
-                <div id="guess-log"></div>
             </div>
 
             <button id="btn-leave-room" class="btn btn-danger">ออกจากห้อง</button>
         </div>
         
-        <!-- Personal History Pop-up -->
-        <div id="history-popup-container">
-            <div id="history-summary">
-                <span>ประวัติส่วนตัว</span>
+        <!-- History Modal -->
+        <div id="history-modal-overlay" class="modal-overlay" style="display: none;">
+            <div id="history-modal" class="modal-content">
+                <div class="modal-header">
+                    <h3>ประวัติการทายของคุณ</h3>
+                    <button id="history-close-btn" class="modal-close-btn">&times;</button>
+                </div>
+                <div id="history-modal-body"></div>
             </div>
-            <div id="history-modal-overlay" style="display: none;">
-                <div id="history-modal">
-                    <div id="history-modal-header">
-                        <h3>ประวัติการทายของคุณ</h3>
-                        <button id="history-close-btn">&times;</button>
-                    </div>
-                    <div id="history-modal-content">
-                        <!-- History will be generated here -->
-                    </div>
+        </div>
+
+        <!-- Chat Modal -->
+        <div id="chat-modal-overlay" class="modal-overlay" style="display: none;">
+            <div id="chat-modal" class="modal-content">
+                <div class="modal-header">
+                    <h3>แชทในห้อง</h3>
+                    <button id="chat-close-btn" class="modal-close-btn">&times;</button>
+                </div>
+                <div id="chat-modal-body"></div>
+                <div id="chat-modal-footer">
+                    <input type="text" id="chat-input" placeholder="พิมพ์ข้อความ...">
+                    <button id="chat-send-btn">ส่ง</button>
                 </div>
             </div>
         </div>
