@@ -18,7 +18,7 @@ let isChatOpen = false;
 let hasInteracted = false;
 let isBgMusicEnabled = true;
 let isSfxEnabled = true;
-let lastAttackerId = null; // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< เพิ่มตัวแปรนี้
+let lastAttackerId = null;
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameElements.setupSection.style.display = myPlayer?.isReady ? 'none' : 'block';
                 gameElements.waitingSection.style.display = myPlayer?.isReady ? 'block' : 'none';
                 gameElements.gameplaySection.style.display = 'none';
-                lastAttackerId = null; // รีเซ็ตเมื่อกลับไปรอ
+                // lastAttackerId = null; // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ลบออกจากตรงนี้
             } else if (roomData.status === 'playing') {
                 const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
                 if (activePlayers.length <= 1) {
@@ -296,16 +296,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
         
-        // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-        // ตรวจจับการเปลี่ยนตา และเล่นเสียงเฉพาะคนที่เพิ่งถึงตา
         if (attackerPlayerId !== lastAttackerId) {
             if (isMyTurn) {
                 playSound(sounds.yourTurn);
             }
-            lastAttackerId = attackerPlayerId; // อัปเดตตาปัจจุบัน
+            lastAttackerId = attackerPlayerId;
         }
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
+        
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
         }
@@ -626,8 +623,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (turnTimer) clearInterval(turnTimer);
 
         playerRef = null; roomRef = null; roomListener = null; currentRoomId = null; currentInput = '';
-        lastAttackerId = null; // รีเซ็ตเมื่อออกจากห้อง
-
+        lastAttackerId = null; // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ย้ายมารีเซ็ตตรงนี้
+        
         navigateTo('preLobby');
     }
 
