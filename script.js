@@ -215,7 +215,6 @@ function leaveRoom() {
     currentRoomId = null;
     clearInterval(turnTimer);
     
-    // Reset UI
     gameElements.setupSection.style.display = 'block';
     gameElements.waitingSection.style.display = 'none';
     gameElements.gameplaySection.style.display = 'none';
@@ -234,20 +233,6 @@ function listenToRoomChanges() {
         }
         const roomData = snapshot.val();
         updateGameUI(roomData);
-
-        // *** START: โค้ดที่เพิ่มเข้ามาเพื่อแก้ไขปัญหา ***
-        // เช็คว่าต้องเริ่มเกมหรือยัง
-        if (roomData.status === 'waiting') {
-            const players = roomData.players || {};
-            const playerCount = Object.keys(players).length;
-            const readyCount = Object.values(players).filter(p => p.isReady).length;
-            
-            // ถ้าผู้เล่นครบตามจำนวน และทุกคนพร้อมแล้ว ให้เริ่มเกม
-            if (playerCount === roomData.config.maxPlayers && playerCount === readyCount) {
-                startGame(roomData);
-            }
-        }
-        // *** END: โค้ดที่เพิ่มเข้ามาเพื่อแก้ไขปัญหา ***
     });
 }
 
@@ -257,7 +242,7 @@ function updateGameUI(room) {
     updatePlayerList(room.players);
 
     const me = room.players[currentPlayerId];
-    if (!me) return; // Player might have been kicked or left
+    if (!me) return;
 
     if (me.isDefeated && room.status !== 'finished') {
         defeatedOverlay.style.display = 'flex';
@@ -357,15 +342,28 @@ function handleReadyUp() {
         const max = Math.pow(10, digitCount) - 1;
         const secretNumber = (Math.floor(Math.random() * (max - min + 1)) + min).toString().padStart(digitCount, '0');
         
-        playerRef.update({ isReady: true, secretNumber: secretNumber });
+        playerRef.update({ isReady: true, secretNumber: secretNumber }).then(() => {
+            // *** START: โค้ดที่ย้ายมาและแก้ไขแล้ว ***
+            // หลังจากอัปเดตสถานะตัวเองแล้ว ให้เช็คสถานะของห้องทั้งหมด
+            roomRef.once('value', roomSnapshot => {
+                const roomData = roomSnapshot.val();
+                if (roomData.status === 'waiting') {
+                    const players = roomData.players || {};
+                    const playerCount = Object.keys(players).length;
+                    const readyCount = Object.values(players).filter(p => p.isReady).length;
+                    
+                    // ถ้าผู้เล่นครบและทุกคนพร้อมแล้ว ให้เริ่มเกม
+                    if (playerCount === roomData.config.maxPlayers && playerCount === readyCount) {
+                        startGame(roomData);
+                    }
+                }
+            });
+            // *** END: โค้ดที่ย้ายมาและแก้ไขแล้ว ***
+        });
     });
 }
 
-// *** START: โค้ดที่เพิ่มเข้ามาเพื่อแก้ไขปัญหา ***
 function startGame(room) {
-    // Host เป็นคนกำหนดค่าเริ่มต้นของเกม
-    if (room.hostId !== currentPlayerId) return;
-
     const playerIds = Object.keys(room.players);
     const firstTargetIndex = 0;
     const firstGuesserIndex = 1;
@@ -382,12 +380,12 @@ function startGame(room) {
         guesses: {}
     };
 
+    // เขียนข้อมูลกลับไปที่ Firebase เพื่อให้ทุกคนรู้ว่าเกมเริ่มแล้ว
     roomRef.update({
         status: 'playing',
         gameState: initialGameState
     });
 }
-// *** END: โค้ดที่เพิ่มเข้ามาเพื่อแก้ไขปัญหา ***
 
 function handleKeypadClick(e) {
     if (!e.target.classList.contains('key') || e.target.id) return;
@@ -529,7 +527,7 @@ function showTitleCards(players) {
         const title = getPlayerTitle(player.stats);
         
         summaryElements.titleCard.emoji.textContent = title.emoji;
-        summaryElements.titleCard.name.textContent = player.name;
+        summaryElements.title-card-name.textContent = player.name;
         summaryElements.titleCard.title.textContent = title.name;
         summaryElements.titleCard.desc.textContent = title.desc;
         
@@ -603,7 +601,6 @@ historyElements.closeBtn.addEventListener('click', () => historyElements.overlay
 chatElements.toggleBtn.addEventListener('click', toggleChat);
 chatElements.closeBtn.addEventListener('click', toggleChat);
 
-// Close modals on overlay click
 historyElements.overlay.addEventListener('click', (e) => { if (e.target === historyElements.overlay) historyElements.overlay.style.display = 'none'; });
 chatElements.overlay.addEventListener('click', (e) => { if (e.target === chatElements.overlay) toggleChat(); });
 
