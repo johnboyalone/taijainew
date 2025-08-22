@@ -1,36 +1,38 @@
-/* --- General & Layout (New Layout + Dark Theme) --- */
+/* --- General & Layout (Super Pastel Theme) --- */
 @import url('https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap');
 
 :root {
-    /* Pastel Color Palette for accents */
-    --primary-color: #a2d2ff;   /* Baby Blue */
-    --secondary-color: #bde0fe; /* Lighter Blue */
-    --success-color: #caffbf;   /* Mint Green */
-    --danger-color: #ffc6c6;    /* Soft Pink */
-    --warning-color: #fdffb6;   /* Pale Yellow */
-    --special-danger: #ff8fab;  /* Hot Pink for Assassinate button */
+    /* "More Pastel" Color Palette */
+    --primary-color: #fec8d8;   /* Peachy Pink */
+    --secondary-color: #d2e7f7; /* Light Baby Blue */
+    --success-color: #d4f0f0;   /* Minty Aqua */
+    --warning-color: #fff2b2;   /* Creamy Yellow */
+    --special-danger: #ffafcc;  /* Strawberry Pink */
     
-    /* New Layout Colors */
-    --main-bg: #3D405B;         /* Dark Slate Blue for the main background */
-    --content-bg: #4F537B;      /* Slightly lighter for content boxes */
-    --text-bright: #FFFFFF;     /* Bright text for dark backgrounds */
-    --text-muted: #c3c5d4;      /* Muted text for secondary info */
-    --border-color: #6A6E94;    /* Border color for keypad and items */
+    /* Text & Background Colors */
+    --main-bg-start: #fde4e4;   /* Gradient Start */
+    --main-bg-end: #d2e7f7;     /* Gradient End */
+    --content-bg: rgba(255, 255, 255, 0.7); /* Translucent White */
+    --text-dark: #5C5470;       /* Dark, soft, brownish-gray */
+    --text-bright: #FFFFFF;     /* Pure White */
+    --border-color: #e6dcdc;    /* Very light border */
 
     /* UI Elements */
     --font-family: 'Mitr', sans-serif;
-    --border-radius-main: 20px;
-    --border-radius-small: 12px;
+    --border-radius-main: 24px;
+    --border-radius-small: 16px;
+    --shadow: 0 8px 25px rgba(180, 180, 210, 0.2);
 }
 
 body {
     font-family: var(--font-family);
-    background-color: var(--main-bg);
-    color: var(--text-bright);
+    background-color: var(--main-bg-start);
+    background-image: linear-gradient(135deg, var(--main-bg-start) 0%, var(--main-bg-end) 100%);
+    color: var(--text-dark);
     margin: 0;
     display: flex;
     justify-content: center;
-    align-items: flex-start; /* Align to top */
+    align-items: flex-start;
     min-height: 100vh;
     text-align: center;
 }
@@ -42,20 +44,22 @@ body {
     box-sizing: border-box;
 }
 
-/* Remove the main .card, the whole page is the card now */
 .card {
-    background: none;
-    padding: 0;
-    box-shadow: none;
+    background: var(--content-bg);
+    backdrop-filter: blur(10px);
+    padding: 30px;
+    border-radius: var(--border-radius-main);
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 h1, h2, h3 {
     margin-top: 0;
     font-weight: 500;
-    color: var(--text-bright);
+    color: var(--text-dark);
 }
 
-/* --- Home Page Layout (New) --- */
+/* --- Home Page Layout --- */
 #page-home {
     display: flex;
     flex-direction: column;
@@ -63,76 +67,68 @@ h1, h2, h3 {
     align-items: center;
     height: 100vh;
     max-width: 100%;
-    padding: 20px;
 }
 
 .home-container {
     width: 100%;
     max-width: 450px;
     text-align: center;
+    background: var(--content-bg);
+    backdrop-filter: blur(10px);
+    padding: 40px;
+    border-radius: var(--border-radius-main);
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 #page-home h1 {
     font-size: 2.5rem;
     font-weight: 600;
     margin-bottom: 15px;
-    color: var(--text-bright);
 }
 
 #page-home p {
     font-size: 1.1rem;
-    color: var(--text-muted);
+    color: var(--text-dark);
+    opacity: 0.8;
     margin-bottom: 30px;
 }
 
 .input-group {
     display: flex;
     width: 100%;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    border-radius: var(--border-radius-main);
+    border-radius: var(--border-radius-small);
     overflow: hidden;
+    border: 1px solid var(--border-color);
 }
 
 .input-group input[type="text"] {
     flex-grow: 1;
     margin: 0;
     border: none;
-    border-radius: 0;
     padding: 18px 20px;
     font-size: 1.1rem;
-    background-color: #FFFFFF;
-    color: #333;
+    background-color: #fff;
+    color: var(--text-dark);
 }
-.input-group input[type="text"]:focus {
-    outline: none;
-    box-shadow: none;
-}
+.input-group input[type="text"]:focus { outline: none; }
 
 .input-group button {
     margin: 0;
     border: none;
-    border-radius: 0;
     padding: 18px 25px;
     font-size: 1.1rem;
-    background-color: #E0E0E0;
-    color: #333;
+    background-color: var(--primary-color);
+    color: var(--text-bright);
     cursor: pointer;
     transition: background-color 0.2s;
 }
-.input-group button:hover { background-color: #D1D1D1; }
+.input-group button:hover { filter: brightness(1.05); }
 
 /* --- Game Status Display --- */
 .turn-info { margin-bottom: 20px; }
-#turn-indicator {
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin-bottom: 5px;
-}
-#target-indicator {
-    font-size: 1.1rem;
-    color: var(--text-muted);
-    margin-bottom: 20px;
-}
+#turn-indicator { font-size: 1.8rem; font-weight: 600; margin-bottom: 5px; }
+#target-indicator { font-size: 1.1rem; color: var(--text-dark); opacity: 0.8; margin-bottom: 20px; }
 
 /* --- Player Grid Layout --- */
 #player-list {
@@ -150,54 +146,47 @@ h1, h2, h3 {
     align-items: center;
     justify-content: center;
     min-height: 80px;
-    border: 1px solid var(--border-color);
     border-radius: var(--border-radius-small);
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--content-bg);
     position: relative;
     z-index: 2;
     transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 10px rgba(180, 180, 210, 0.1);
 }
 
 .player-item.attacker {
     border-color: var(--special-danger);
-    box-shadow: 0 0 12px var(--special-danger);
+    box-shadow: 0 0 15px var(--special-danger);
     transform: scale(1.05);
 }
 
 .player-item.target {
     border-color: var(--primary-color);
-    box-shadow: 0 0 12px var(--primary-color);
+    box-shadow: 0 0 15px var(--primary-color);
     transform: scale(1.05);
 }
 
 .player-defeated {
-    opacity: 0.5;
-    background-color: rgba(0, 0, 0, 0.2);
+    opacity: 0.6;
+    background-color: rgba(200, 200, 200, 0.2);
     border-style: dashed;
 }
 
 .player-info { font-size: 1rem; font-weight: 500; }
 .player-item .hp-bar { display: flex; gap: 4px; margin-top: 5px; }
-.player-item .hp-point { width: 12px; height: 12px; background-color: #ffafcc; border-radius: 50%; }
-.player-item .hp-point.lost { background: #6A6E94; }
+.player-item .hp-point { width: 12px; height: 12px; background-color: var(--special-danger); border-radius: 50%; }
+.player-item .hp-point.lost { background: #dcd3d3; }
 
 /* --- Animation: Attacker to Target --- */
 #attack-animation-container {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    overflow: hidden;
-    pointer-events: none;
-    z-index: 1;
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    overflow: hidden; pointer-events: none; z-index: 1;
 }
 .attack-arrow {
-    position: absolute;
-    color: #ffb703;
-    font-size: 1.5rem;
-    font-weight: bold;
-    text-shadow: 0 0 5px white;
-    animation: move-arrow 1.5s linear infinite;
-    opacity: 0;
+    position: absolute; color: var(--special-danger); font-size: 1.5rem;
+    font-weight: bold; text-shadow: 0 0 5px white;
+    animation: move-arrow 1.5s linear infinite; opacity: 0;
 }
 @keyframes move-arrow {
     0% { opacity: 1; offset-distance: 0%; }
@@ -211,114 +200,99 @@ h1, h2, h3 {
     border-radius: var(--border-radius-main);
     padding: 20px;
     margin-bottom: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: var(--shadow);
 }
 #my-secret-number-display {
     font-size: 1rem;
-    color: var(--text-muted);
+    color: var(--text-dark);
+    opacity: 0.8;
     margin-bottom: 10px;
 }
 #my-secret-number-display span {
-    display: block;
-    font-size: 2.5rem;
-    font-weight: 500;
-    letter-spacing: 8px;
-    color: var(--text-bright);
+    display: block; font-size: 2.5rem; font-weight: 500;
+    letter-spacing: 8px; color: var(--text-dark);
 }
 
 #timer-indicator {
-    width: 100%;
-    height: 6px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
-    margin-bottom: 15px;
-    overflow: hidden;
+    width: 100%; height: 8px; background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 4px; margin-bottom: 15px; overflow: hidden;
 }
 #timer-indicator-bar {
-    width: 100%;
-    height: 100%;
-    background-image: linear-gradient(to right, #ffafcc, var(--special-danger));
-    border-radius: 3px;
-    transition: width 0.5s linear;
+    width: 100%; height: 100%;
+    background-image: linear-gradient(to right, var(--primary-color), var(--special-danger));
+    border-radius: 4px; transition: width 0.5s linear;
 }
 
 #game-display {
-    font-size: 2.5rem;
-    font-weight: 500;
-    letter-spacing: 10px;
-    color: var(--text-bright);
-    padding: 10px 0;
+    font-size: 2.5rem; font-weight: 500; letter-spacing: 10px;
+    color: var(--text-dark); padding: 10px 0;
 }
 
-/* --- Keypad --- */
+/* --- Keypad & Action Buttons --- */
 .keypad {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 15px;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-bottom: 15px;
 }
 .key {
-    padding: 18px;
-    font-size: 1.6rem;
-    font-weight: 400;
-    border-radius: var(--border-radius-main);
-    border: 1px solid var(--border-color);
-    background-color: transparent;
-    color: var(--text-bright);
-    cursor: pointer;
-    transition: all 0.1s ease;
+    padding: 18px; font-size: 1.6rem; font-weight: 500;
+    border-radius: var(--border-radius-small); border: none;
+    background-color: var(--content-bg); color: var(--text-dark);
+    cursor: pointer; transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.8);
 }
-.key:active {
-    background-color: rgba(255, 255, 255, 0.1);
-    transform: scale(0.95);
-}
+.key:active { transform: scale(0.95); filter: brightness(0.95); }
 
-/* --- Action Buttons --- */
-#btn-delete, #btn-guess {
-    font-size: 1.2rem;
-    font-weight: 500;
-    border: none;
-    color: var(--text-dark);
-}
 #btn-delete { background-color: var(--warning-color); }
 #btn-guess { background-color: var(--success-color); }
 
 #btn-assassinate {
-    width: 100%;
-    padding: 15px;
-    border: none;
-    border-radius: var(--border-radius-main);
-    font-size: 1.2rem;
-    font-weight: 500;
-    cursor: pointer;
-    margin-top: 10px;
-    background-color: var(--special-danger);
-    color: var(--text-bright);
+    width: 100%; padding: 15px; border: none;
+    border-radius: var(--border-radius-main); font-size: 1.2rem; font-weight: 500;
+    cursor: pointer; margin-top: 10px;
+    background-color: var(--special-danger); color: var(--text-bright);
     transition: all 0.2s ease;
 }
-#btn-assassinate:active {
-    transform: scale(0.98);
-    filter: brightness(1.1);
-}
+#btn-assassinate:active { transform: scale(0.98); filter: brightness(1.1); }
 
-/* --- Other elements adapted to the dark theme --- */
+/* --- Modals & Settings --- */
 .modal-overlay {
-    background-color: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
+    background-color: rgba(92, 84, 112, 0.6);
+    backdrop-filter: blur(8px);
 }
 .modal-content {
     background-color: var(--content-bg);
-    color: var(--text-bright);
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: var(--shadow);
 }
 .modal-header { border-bottom-color: var(--border-color); }
-.close-btn { color: var(--text-muted); }
+.close-btn { color: var(--text-dark); opacity: 0.7; }
 
-.chat-message.theirs { background-color: #6A6E94; }
-.chat-message.mine { background-color: var(--primary-color); color: var(--text-dark); }
-#chat-input { background-color: var(--main-bg); border-color: var(--border-color); color: var(--text-bright); }
-#chat-send-btn { background-color: var(--primary-color); color: var(--text-dark); }
+.settings-button {
+    position: absolute; top: 20px; right: 20px; z-index: 10;
+    color: var(--text-dark); opacity: 0.6;
+}
+.settings-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 1.2rem;
+}
+.switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc; transition: .4s;
+}
+.slider:before {
+    position: absolute; content: ""; height: 26px; width: 26px;
+    left: 4px; bottom: 4px; background-color: white; transition: .4s;
+}
+input:checked + .slider { background-color: var(--primary-color); }
+input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
+input:checked + .slider:before { transform: translateX(26px); }
+.slider.round { border-radius: 34px; }
+.slider.round:before { border-radius: 50%; }
 
 /* Hide elements not present in the new layout for clarity */
 .game-header { display: none; }
 .game-section { background: none; box-shadow: none; padding: 0; }
-#btn-leave-room { background-color: var(--content-bg); }
+#btn-leave-room { background-color: var(--content-bg); color: var(--text-dark); }
