@@ -234,6 +234,20 @@ function listenToRoomChanges() {
         }
         const roomData = snapshot.val();
         updateGameUI(roomData);
+
+        // *** START: โค้ดที่เพิ่มเข้ามาเพื่อแก้ไขปัญหา ***
+        // เช็คว่าต้องเริ่มเกมหรือยัง
+        if (roomData.status === 'waiting') {
+            const players = roomData.players || {};
+            const playerCount = Object.keys(players).length;
+            const readyCount = Object.values(players).filter(p => p.isReady).length;
+            
+            // ถ้าผู้เล่นครบตามจำนวน และทุกคนพร้อมแล้ว ให้เริ่มเกม
+            if (playerCount === roomData.config.maxPlayers && playerCount === readyCount) {
+                startGame(roomData);
+            }
+        }
+        // *** END: โค้ดที่เพิ่มเข้ามาเพื่อแก้ไขปัญหา ***
     });
 }
 
@@ -346,6 +360,34 @@ function handleReadyUp() {
         playerRef.update({ isReady: true, secretNumber: secretNumber });
     });
 }
+
+// *** START: โค้ดที่เพิ่มเข้ามาเพื่อแก้ไขปัญหา ***
+function startGame(room) {
+    // Host เป็นคนกำหนดค่าเริ่มต้นของเกม
+    if (room.hostId !== currentPlayerId) return;
+
+    const playerIds = Object.keys(room.players);
+    const firstTargetIndex = 0;
+    const firstGuesserIndex = 1;
+
+    const initialGameState = {
+        targetPlayerId: playerIds[firstTargetIndex],
+        turnOrder: playerIds,
+        turn: {
+            playerId: playerIds[firstGuesserIndex],
+            targetIndex: firstTargetIndex,
+            guesserIndex: firstGuesserIndex
+        },
+        turnStartTime: firebase.database.ServerValue.TIMESTAMP,
+        guesses: {}
+    };
+
+    roomRef.update({
+        status: 'playing',
+        gameState: initialGameState
+    });
+}
+// *** END: โค้ดที่เพิ่มเข้ามาเพื่อแก้ไขปัญหา ***
 
 function handleKeypadClick(e) {
     if (!e.target.classList.contains('key') || e.target.id) return;
@@ -529,11 +571,11 @@ function showSummaryPage(players) {
 
 function getPlayerTitle(stats) {
     const titles = [
-        { name: "มือสังหารเลือดเย็น", emoji: "🔪", desc: "เชี่ยวชาญในการกำจัดเป้าหมายอย่างแม่นยำ", cond: stats.assassinations > 0 },
-        { name: "นักสืบอัจฉริยะ", emoji: "🕵️", desc: "ทายเลขได้ถูกต้องแม่นยำราวกับตาเห็น", cond: stats.correctGuesses > 2 },
-        { name: "จอมมั่ว", emoji: "😵", desc: "ทายไปเรื่อย แต่ไม่ถูกเลยสักครั้ง", cond: stats.guessesMade > 5 && stats.correctGuesses === 0 },
-        { name: "สายซุ่ม", emoji: "🐢", desc: "ไม่ค่อยทาย แต่ถ้าทายแล้วมักจะถูก", cond: stats.guessesMade < 3 && stats.correctGuesses > 0 },
-        { name: "ผู้ร่วมสนุก", emoji: "🥳", desc: "มาเพื่อสร้างสีสัน ไม่เน้นแพ้ชนะ", cond: true }
+        { name: "มือสังหารเลือดเย็น", emoji: "🔪", desc: "เชี่ยวชาญในการกำจัดเป้าหมายอย่างแม่นยำ", cond: (s) => s.assassinations > 0 },
+        { name: "นักสืบอัจฉริยะ", emoji: "🕵️", desc: "ทายเลขได้ถูกต้องแม่นยำราวกับตาเห็น", cond: (s) => s.correctGuesses > 2 },
+        { name: "จอมมั่ว", emoji: "😵", desc: "ทายไปเรื่อย แต่ไม่ถูกเลยสักครั้ง", cond: (s) => s.guessesMade > 5 && s.correctGuesses === 0 },
+        { name: "สายซุ่ม", emoji: "🐢", desc: "ไม่ค่อยทาย แต่ถ้าทายแล้วมักจะถูก", cond: (s) => s.guessesMade < 3 && s.correctGuesses > 0 },
+        { name: "ผู้ร่วมสนุก", emoji: "🥳", desc: "มาเพื่อสร้างสีสัน ไม่เน้นแพ้ชนะ", cond: (s) => true }
     ];
     return titles.find(t => t.cond(stats));
 }
