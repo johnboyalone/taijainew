@@ -245,7 +245,7 @@ input[type="text"], select {
     margin-top: 15px;
 }
 
-/* --- Modals (History & Chat) --- */
+/* --- Modals (History, Chat, Settings) --- */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0;
@@ -366,46 +366,98 @@ input[type="text"], select {
     border: 2px solid white;
 }
 
+/* Settings Modal & Toggle Switch (ที่เพิ่มเข้ามาใหม่) */
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 5px;
+    font-size: 1.1rem;
+}
+.setting-item:not(:last-child) {
+    border-bottom: 1px solid #eee;
+}
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+.switch input { 
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary-color);
+}
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+.slider.round {
+    border-radius: 34px;
+}
+.slider.round:before {
+    border-radius: 50%;
+}
+
 /* Chat Marquee (ข้อความวิ่งกลางจอ) */
 #chat-marquee-container {
-    position: fixed; /* เปลี่ยนเป็น fixed เพื่อให้อยู่กลางจอเสมอ */
+    position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%); /* จัดให้อยู่กึ่งกลางเป๊ะๆ */
-    width: 100%; /* ทำให้ container กว้างเต็มจอ */
-    max-width: 600px; /* แต่ไม่กว้างเกินไปบนจอใหญ่ */
-    height: 40px; /* เพิ่มความสูงเล็กน้อย */
+    transform: translate(-50%, -50%);
+    width: 100%;
+    max-width: 600px;
+    height: 40px;
     overflow: hidden;
     pointer-events: none;
     z-index: 1100;
 }
-
 .chat-marquee-item {
     position: absolute;
     white-space: nowrap;
-    background-color: rgba(0, 0, 0, 0.8); /* ทำให้เข้มขึ้นเล็กน้อย */
+    background-color: rgba(0, 0, 0, 0.8);
     color: white;
-    padding: 8px 20px; /* เพิ่ม padding ให้ดูใหญ่ขึ้น */
+    padding: 8px 20px;
     border-radius: 20px;
-    font-size: 1.1rem; /* เพิ่มขนาดฟอนต์ */
+    font-size: 1.1rem;
     font-weight: 600;
-    animation: marquee-center 6s linear forwards; /* เรียกใช้ animation ใหม่ */
+    animation: marquee-center 6s linear forwards;
 }
-
-/* Keyframe ใหม่สำหรับวิ่งจากขวาไปซ้ายผ่านกลางจอ */
 @keyframes marquee-center {
     0% {
-        /* เริ่มจากนอกจอฝั่งขวา */
         transform: translateX(150%);
         opacity: 1;
     }
     100% {
-        /* วิ่งไปจนสุดจอด้านซ้าย */
         transform: translateX(-150%);
         opacity: 1;
     }
 }
-
 
 /* --- Defeated & Summary --- */
 #defeated-overlay {
