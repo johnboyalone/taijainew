@@ -170,59 +170,33 @@ input[type="text"]:focus, select:focus {
     border-radius: 4px;
 }
 
-/* --- Player Grid Layout (New) --- */
+/* Player List */
 #player-list {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); /* จัดเรียง 3 คอลัมน์ */
-    gap: 15px; /* ระยะห่างระหว่างช่อง */
-    margin-bottom: 25px;
-    position: relative; /* สำคัญมากสำหรับอนิเมชัน */
+    margin-bottom: 20px;
 }
-
 .player-item {
-    /* ปรับสไตล์ของแต่ละช่องผู้เล่น */
-    padding: 15px;
-    margin-bottom: 0; /* ไม่ต้องใช้ margin-bottom แล้ว เพราะใช้ gap แทน */
     display: flex;
-    flex-direction: column; /* จัดเรียงเนื้อหาในแนวตั้ง */
-    align-items: center; /* จัดกลาง */
-    justify-content: center;
-    min-height: 100px; /* กำหนดความสูงขั้นต่ำ */
-    border: 2px solid #e0e0e0;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: white;
     border-radius: var(--border-radius-small);
-    position: relative; /* สำหรับสถานะ */
-    z-index: 2; /* ให้อยู่เหนือเส้นอนิเมชัน */
-    background-color: white; /* ต้องมีสีพื้นหลังทึบ */
-    transition: all 0.3s ease;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    transition: all 0.3s;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
-
-.player-item.attacker {
-    border-color: var(--success-color);
-    box-shadow: 0 0 10px var(--success-color);
-    transform: scale(1.05);
-}
-
-.player-item.target {
-    border-color: var(--danger-color);
-    box-shadow: 0 0 10px var(--danger-color);
-    transform: scale(1.05);
-}
-
 .player-defeated {
     opacity: 0.6;
     background-color: #f1f1f1;
     text-decoration: line-through;
-    border-style: dashed;
 }
-
 .player-info {
-    font-size: 1.1rem; /* ปรับขนาดให้พอดี */
-    font-weight: 600;
-    margin-bottom: 8px;
-    word-break: break-all;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
 }
-
 .hp-bar {
     display: flex;
     gap: 5px;
@@ -248,8 +222,6 @@ input[type="text"]:focus, select:focus {
     font-size: 1rem;
     font-weight: 600;
     animation: fadeInOut 3s forwards;
-    position: absolute;
-    top: -10px;
 }
 @keyframes fadeInOut {
     0% { opacity: 0; transform: scale(0.8); }
@@ -257,43 +229,6 @@ input[type="text"]:focus, select:focus {
     80% { opacity: 1; transform: scale(1); }
     100% { opacity: 0; transform: scale(0.8); }
 }
-
-/* --- Animation: Attacker to Target (New) --- */
-#attack-animation-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    pointer-events: none; /* ทำให้คลิกทะลุได้ */
-    z-index: 1; /* ให้อยู่ใต้ช่องผู้เล่น */
-}
-
-.attack-arrow {
-    position: absolute;
-    color: var(--warning-color);
-    font-size: 1.5rem; /* ขนาดของ > */
-    font-weight: bold;
-    text-shadow: 0 0 5px var(--warning-color), 0 0 10px white;
-    animation: move-arrow 1.5s linear infinite;
-    opacity: 0;
-}
-
-@keyframes move-arrow {
-    0% {
-        opacity: 1;
-        offset-distance: 0%;
-    }
-    90% {
-        opacity: 1;
-    }
-    100% {
-        opacity: 0;
-        offset-distance: 100%;
-    }
-}
-
 
 /* Game Sections */
 .game-section {
