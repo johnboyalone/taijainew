@@ -343,8 +343,6 @@ function handleReadyUp() {
         const secretNumber = (Math.floor(Math.random() * (max - min + 1)) + min).toString().padStart(digitCount, '0');
         
         playerRef.update({ isReady: true, secretNumber: secretNumber }).then(() => {
-            // *** START: โค้ดที่ย้ายมาและแก้ไขแล้ว ***
-            // หลังจากอัปเดตสถานะตัวเองแล้ว ให้เช็คสถานะของห้องทั้งหมด
             roomRef.once('value', roomSnapshot => {
                 const roomData = roomSnapshot.val();
                 if (roomData.status === 'waiting') {
@@ -352,13 +350,11 @@ function handleReadyUp() {
                     const playerCount = Object.keys(players).length;
                     const readyCount = Object.values(players).filter(p => p.isReady).length;
                     
-                    // ถ้าผู้เล่นครบและทุกคนพร้อมแล้ว ให้เริ่มเกม
                     if (playerCount === roomData.config.maxPlayers && playerCount === readyCount) {
                         startGame(roomData);
                     }
                 }
             });
-            // *** END: โค้ดที่ย้ายมาและแก้ไขแล้ว ***
         });
     });
 }
@@ -380,7 +376,6 @@ function startGame(room) {
         guesses: {}
     };
 
-    // เขียนข้อมูลกลับไปที่ Firebase เพื่อให้ทุกคนรู้ว่าเกมเริ่มแล้ว
     roomRef.update({
         status: 'playing',
         gameState: initialGameState
@@ -527,7 +522,9 @@ function showTitleCards(players) {
         const title = getPlayerTitle(player.stats);
         
         summaryElements.titleCard.emoji.textContent = title.emoji;
-        summaryElements.title-card-name.textContent = player.name;
+        // *** START: โค้ดที่แก้ไขแล้ว ***
+        summaryElements.titleCard.name.textContent = player.name;
+        // *** END: โค้ดที่แก้ไขแล้ว ***
         summaryElements.titleCard.title.textContent = title.name;
         summaryElements.titleCard.desc.textContent = title.desc;
         
@@ -536,7 +533,7 @@ function showTitleCards(players) {
         setTimeout(() => {
             summaryElements.titleCardOverlay.classList.remove('visible');
             currentIndex++;
-            setTimeout(displayNextCard, 500); // Wait for fade out
+            setTimeout(displayNextCard, 500);
         }, 4000);
     }
 
