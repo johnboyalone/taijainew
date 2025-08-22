@@ -308,14 +308,13 @@ input[type="text"], select {
     flex-grow: 1;
     overflow-y: auto;
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse; /* Newest messages at the bottom */
 }
 #chat-messages {
     display: flex;
     flex-direction: column;
     gap: 10px;
     padding: 5px;
-    margin-top: auto; /* Pushes messages to the bottom */
 }
 .chat-message {
     padding: 8px 12px;
@@ -391,62 +390,18 @@ input[type="text"], select {
     100% { transform: translateY(-10px); opacity: 0; }
 }
 
-/* --- Defeated & End Game Overlays --- */
-.fullscreen-overlay {
+/* --- Defeated & Summary --- */
+#defeated-overlay {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.85);
+    color: white;
     display: flex;
     justify-content: center;
     align-items: center;
-    color: white;
-    z-index: 2000;
-    opacity: 0;
-    transition: opacity 0.5s;
-    pointer-events: none;
-}
-.fullscreen-overlay.visible {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-#defeated-overlay {
-    background-color: rgba(0,0,0,0.85);
     z-index: 999; /* Below modals */
 }
-#winner-announcement-overlay {
-    background-color: rgba(40, 167, 69, 0.9); /* Success color */
-}
-.winner-content {
-    animation: zoomIn 0.5s ease-out forwards;
-}
-.winner-emoji { font-size: 5rem; }
-.winner-text { font-size: 2rem; }
-#winner-name-display { font-size: 3rem; font-weight: 600; }
-
-#title-card-overlay {
-    background-color: rgba(0,0,0,0.7);
-}
-#title-card {
-    background: white;
-    color: var(--dark-color);
-    padding: 30px;
-    border-radius: 20px;
-    width: 80%;
-    max-width: 350px;
-    transform: scale(0.7);
-    transition: transform 0.5s, opacity 0.5s;
-    opacity: 0;
-}
-#title-card-overlay.visible #title-card {
-    transform: scale(1);
-    opacity: 1;
-}
-#title-card-emoji { font-size: 4rem; margin-bottom: 10px; }
-#title-card-name { font-size: 1.8rem; margin-bottom: 5px; }
-#title-card-title { font-size: 1.3rem; color: var(--primary-color); margin-bottom: 15px; }
-#title-card-desc { font-size: 1rem; color: var(--secondary-color); }
-
 #page-summary #summary-winner {
     font-size: 1.5rem;
     font-weight: 600;
@@ -462,489 +417,53 @@ input[type="text"], select {
     font-style: italic;
 }
 
-/* Spinner & Animations */
-.spinner {
-    border: 4px solid rgba(0,0,0,0.1);
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border-left-color: var(--primary-color);
-    animation: spin 1s ease infinite;
-    margin: 20px auto;
-}
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-@keyframes zoomIn {
-    from { transform: scale(0.5); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-/* --- General & Layout --- */
-@import url('https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;600&display=swap');
-
-:root {
-    --primary-color: #007bff;
-    --secondary-color: #6c757d;
-    --success-color: #28a745;
-    --danger-color: #dc3545;
-    --warning-color: #ffc107;
-    --light-color: #f8f9fa;
-    --dark-color: #343a40;
-    --background-color: #e9ecef;
-    --font-family: 'Mitr', sans-serif;
-}
-
-body {
-    font-family: var(--font-family);
-    background-color: var(--background-color);
-    color: var(--dark-color);
-    margin: 0;
+/* --- Title Cards --- */
+#title-card-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.7);
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    text-align: center;
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.5s;
 }
-
-.page {
-    width: 100%;
-    max-width: 500px;
-    padding: 20px;
-    box-sizing: border-box;
-}
-
-.card {
+#title-card {
     background: white;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    padding: 30px;
+    border-radius: 20px;
+    width: 80%;
+    max-width: 350px;
+    transform: scale(0.7);
+    transition: transform 0.5s;
 }
-
-h1, h2, h3 {
-    margin-top: 0;
+#title-card-overlay.visible {
+    opacity: 1;
 }
-
-/* --- Buttons & Inputs --- */
-.btn {
-    display: block;
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-family: var(--font-family);
-    cursor: pointer;
-    margin-top: 10px;
-    transition: background-color 0.2s, transform 0.1s;
+#title-card-overlay.visible #title-card {
+    transform: scale(1);
 }
-.btn:active { transform: scale(0.98); }
-.btn-primary { background-color: var(--primary-color); color: white; }
-.btn-secondary { background-color: var(--secondary-color); color: white; }
-.btn-danger { background-color: var(--danger-color); color: white; }
-.btn-icon {
-    background: none;
-    border: none;
-    font-size: 1.8rem;
-    cursor: pointer;
-    padding: 0 10px;
-    position: relative;
-}
-
-input[type="text"], select {
-    width: 100%;
-    padding: 10px;
-    margin-top: 5px;
-    margin-bottom: 15px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-sizing: border-box;
-    font-size: 1rem;
-    font-family: var(--font-family);
-}
-
-.form-group {
-    text-align: left;
-    margin-bottom: 15px;
-}
-.form-group label {
-    font-weight: 600;
-    margin-bottom: 5px;
-    display: block;
-}
-
-/* --- Lobby --- */
-#room-list-container {
-    max-height: 50vh;
-    overflow-y: auto;
-    margin-top: 20px;
-}
-.room-item {
-    background-color: var(--light-color);
-    padding: 15px;
+#title-card-emoji {
+    font-size: 4rem;
     margin-bottom: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s;
 }
-.room-item:hover {
-    background-color: #d3d9df;
-}
-
-/* --- Game Page --- */
-.game-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-.game-header-buttons {
-    display: flex;
-    align-items: center;
-    position: relative;
-}
-#my-secret-number-display {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: 15px;
-}
-#my-secret-number-display span {
-    letter-spacing: 3px;
-}
-
-/* Player List */
-#player-list {
-    margin-bottom: 20px;
-}
-.player-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px;
-    background: white;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    font-size: 1.1rem;
-    transition: opacity 0.3s;
-}
-.player-defeated {
-    opacity: 0.5;
-    text-decoration: line-through;
-}
-.player-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.hp-bar {
-    display: flex;
-    gap: 4px;
-}
-.hp-point {
-    width: 15px;
-    height: 15px;
-    background-color: var(--success-color);
-    border-radius: 50%;
-    transition: background-color 0.3s;
-}
-.hp-point.lost {
-    background-color: #ddd;
-}
-.recent-guess {
-    background-color: var(--warning-color);
-    color: var(--dark-color);
-    padding: 2px 8px;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    animation: fadeInOut 3s forwards;
-}
-@keyframes fadeInOut {
-    0% { opacity: 0; }
-    20% { opacity: 1; }
-    80% { opacity: 1; }
-    100% { opacity: 0; }
-}
-
-/* Game Sections */
-.game-section {
-    padding: 20px;
-    background: white;
-    border-radius: 15px;
-    margin-bottom: 15px;
-}
-.turn-info {
-    margin-bottom: 15px;
-}
-#timer-indicator {
-    font-size: 2.5rem;
-    font-weight: 600;
-    color: var(--danger-color);
-}
-#target-indicator, #turn-indicator {
-    font-size: 1.2rem;
-    font-weight: 600;
-}
-#game-display {
-    height: 50px;
-    background-color: var(--light-color);
-    border-radius: 8px;
-    font-size: 2rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 15px;
-    letter-spacing: 5px;
-    font-weight: 600;
-}
-.keypad {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-.key {
-    padding: 15px;
-    font-size: 1.5rem;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    background-color: white;
-    cursor: pointer;
-}
-.key-special { background-color: #e9ecef; }
-.key-action { background-color: var(--success-color); color: white; }
-.keypad.disabled .key {
-    background-color: #f8f9fa;
-    color: #adb5bd;
-    cursor: not-allowed;
-    pointer-events: none;
-}
-#btn-assassinate {
-    margin-top: 15px;
-}
-
-/* --- Modals (History & Chat) --- */
-.modal-overlay {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background-color: rgba(0,0,0,0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-.modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 15px;
-    width: 90%;
-    max-width: 450px;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-}
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-}
-.close-btn {
-    background: none;
-    border: none;
-    font-size: 2rem;
-    cursor: pointer;
-}
-
-/* History Modal */
-#history-modal-body {
-    overflow-y: auto;
-}
-.history-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-}
-.history-table th, .history-table td {
-    padding: 8px;
-    text-align: center;
-}
-.history-table th {
-    background-color: var(--light-color);
-}
-.history-table tr:not(:last-child) {
-    border-bottom: 1px solid #eee;
-}
-.history-guess { font-weight: 600; font-size: 1.1rem; }
-.hint-bull { color: var(--success-color); font-weight: 600; }
-.hint-cow { color: var(--warning-color); font-weight: 600; }
-
-/* Chat Modal */
-#chat-modal-body {
-    flex-grow: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-}
-#chat-messages {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 5px;
-    margin-top: auto; /* Pushes messages to the bottom */
-}
-.chat-message {
-    padding: 8px 12px;
-    border-radius: 15px;
-    max-width: 75%;
-    word-wrap: break-word;
-}
-.chat-message.mine {
-    background-color: var(--primary-color);
-    color: white;
-    align-self: flex-end;
-    border-bottom-right-radius: 5px;
-}
-.chat-message.theirs {
-    background-color: #e9ecef;
-    align-self: flex-start;
-    border-bottom-left-radius: 5px;
-}
-.chat-message .sender {
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-bottom: 3px;
-    opacity: 0.8;
-}
-.chat-input-area {
-    display: flex;
-    margin-top: 15px;
-    gap: 10px;
-}
-#chat-input {
-    flex-grow: 1;
-    margin: 0;
-}
-#chat-send-btn {
-    padding: 10px 15px;
-    border: none;
-    background-color: var(--primary-color);
-    color: white;
-    border-radius: 5px;
-    cursor: pointer;
-}
-#chat-unread-indicator {
-    position: absolute;
-    top: 5px; right: 5px;
-    width: 10px; height: 10px;
-    background-color: var(--danger-color);
-    border-radius: 50%;
-    border: 2px solid white;
-}
-
-/* Floating Chat Message */
-#floating-chat-container {
-    position: absolute;
-    bottom: 100%;
-    right: 0;
-    width: 200px;
-    pointer-events: none;
-}
-.floating-chat-bubble {
-    background-color: rgba(0,0,0,0.75);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 10px;
+#title-card-name {
+    font-size: 1.8rem;
     margin-bottom: 5px;
-    font-size: 0.9rem;
-    opacity: 0;
-    animation: floatUpAndFade 4s ease-out forwards;
 }
-@keyframes floatUpAndFade {
-    0% { transform: translateY(10px); opacity: 0; }
-    15% { transform: translateY(0); opacity: 1; }
-    85% { transform: translateY(0); opacity: 1; }
-    100% { transform: translateY(-10px); opacity: 0; }
+#title-card-title {
+    font-size: 1.3rem;
+    color: var(--primary-color);
+    margin-bottom: 15px;
 }
-
-/* --- Defeated & End Game Overlays --- */
-.fullscreen-overlay {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    z-index: 2000;
-    opacity: 0;
-    transition: opacity 0.5s;
-    pointer-events: none;
-}
-.fullscreen-overlay.visible {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-#defeated-overlay {
-    background-color: rgba(0,0,0,0.85);
-    z-index: 999; /* Below modals */
-}
-#winner-announcement-overlay {
-    background-color: rgba(40, 167, 69, 0.9); /* Success color */
-}
-.winner-content {
-    animation: zoomIn 0.5s ease-out forwards;
-}
-.winner-emoji { font-size: 5rem; }
-.winner-text { font-size: 2rem; }
-#winner-name-display { font-size: 3rem; font-weight: 600; }
-
-#title-card-overlay {
-    background-color: rgba(0,0,0,0.7);
-}
-#title-card {
-    background: white;
-    color: var(--dark-color);
-    padding: 30px;
-    border-radius: 20px;
-    width: 80%;
-    max-width: 350px;
-    transform: scale(0.7);
-    transition: transform 0.5s, opacity 0.5s;
-    opacity: 0;
-}
-#title-card-overlay.visible #title-card {
-    transform: scale(1);
-    opacity: 1;
-}
-#title-card-emoji { font-size: 4rem; margin-bottom: 10px; }
-#title-card-name { font-size: 1.8rem; margin-bottom: 5px; }
-#title-card-title { font-size: 1.3rem; color: var(--primary-color); margin-bottom: 15px; }
-#title-card-desc { font-size: 1rem; color: var(--secondary-color); }
-
-#page-summary #summary-winner {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--success-color);
-    margin-bottom: 20px;
-}
-#summary-player-list .player-item {
+#title-card-desc {
     font-size: 1rem;
-}
-.player-title {
-    font-size: 0.8rem;
     color: var(--secondary-color);
-    font-style: italic;
 }
 
-/* Spinner & Animations */
+/* Spinner */
 .spinner {
     border: 4px solid rgba(0,0,0,0.1);
     width: 36px;
@@ -957,8 +476,4 @@ input[type="text"], select {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-@keyframes zoomIn {
-    from { transform: scale(0.5); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
 }

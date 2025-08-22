@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เกมทายเลขมหาประลัย</title>
     <link rel="stylesheet" href="style.css">
+    <!-- โค้ดที่จำเป็นและถูกนำกลับมาแล้ว -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
@@ -93,7 +94,7 @@
         </div>
 
         <div id="my-secret-number-display">เลขลับของคุณ: <span>????</span></div>
-        
+
         <div id="player-list"></div>
 
         <!-- ส่วนตั้งค่าเลขลับ -->
@@ -127,7 +128,7 @@
             </div>
             <button id="btn-assassinate" class="btn btn-danger">ตุยซะเถอะ!</button>
         </div>
-        
+
         <button id="btn-leave-room" class="btn btn-secondary">ออกจากห้อง</button>
     </div>
 
@@ -167,15 +168,6 @@
         </div>
     </div>
 
-    <!-- หน้าจอประกาศผู้ชนะ -->
-    <div id="winner-announcement-overlay" class="fullscreen-overlay" style="display: none;">
-        <div class="winner-content">
-            <div class="winner-emoji">🏆</div>
-            <div class="winner-text">ผู้ชนะคือ</div>
-            <div id="winner-name-display"></div>
-        </div>
-    </div>
-
     <!-- หน้าสรุปผลเกม -->
     <div id="page-summary" class="page" style="display: none;">
         <div class="card">
@@ -187,7 +179,7 @@
     </div>
 
     <!-- การ์ดฉายา -->
-    <div id="title-card-overlay" class="fullscreen-overlay" style="display: none;">
+    <div id="title-card-overlay" style="display: none;">
         <div id="title-card">
             <div id="title-card-emoji"></div>
             <h2 id="title-card-name"></h2>
