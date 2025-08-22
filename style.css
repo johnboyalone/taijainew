@@ -35,15 +35,20 @@ body {
     overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
+/* --- Page Navigation (FIXED) --- */
 .page {
     width: 100%;
     max-width: 450px;
     padding: 20px;
     box-sizing: border-box;
-    display: none; /* Default hidden */
+    display: none; /* Hide all pages by default */
     justify-content: center;
     align-items: center;
     flex-direction: column;
+}
+
+.page.active {
+    display: flex; /* Show only the active page */
 }
 
 .card {
@@ -74,13 +79,13 @@ h1, h2, h3 { margin-top: 0; font-weight: 500; }
     overflow: hidden; border: 1px solid var(--border-color);
 }
 .input-group input[type="text"] {
-    flex: 1 1 70%; /* Input takes more space */
+    flex: 1 1 70%;
     margin: 0; border: none; padding: 15px 20px; font-size: 1rem;
     background-color: #fff; color: var(--text-dark);
 }
 .input-group input[type="text"]:focus { outline: none; }
 .input-group button {
-    flex: 1 1 30%; /* Button takes less space */
+    flex: 1 1 30%;
     margin: 0; border: none; padding: 15px; font-size: 1rem;
     background-color: var(--primary-color); color: var(--text-bright);
     cursor: pointer; transition: background-color 0.2s;
@@ -260,6 +265,7 @@ h1, h2, h3 { margin-top: 0; font-weight: 500; }
     background: none; border: none; font-size: 2rem;
     cursor: pointer; color: var(--text-dark); opacity: 0.7;
 }
+.settings-body { display: flex; flex-direction: column; gap: 15px; }
 .settings-row {
     display: flex; justify-content: space-between; align-items: center;
     font-size: 1.2rem;
@@ -279,6 +285,18 @@ input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
 input:checked + .slider:before { transform: translateX(26px); }
 .slider.round { border-radius: 34px; }
 .slider.round:before { border-radius: 50%; }
+
+/* --- Other Modals (Chat, History, Defeated, etc.) --- */
+.chat-input-area { display: flex; margin-top: 15px; gap: 10px; }
+#chat-input { flex-grow: 1; margin: 0; }
+#chat-send-btn {
+    padding: 10px 15px; border: none; background-color: var(--primary-color);
+    color: white; border-radius: var(--border-radius-small); cursor: pointer;
+}
+#defeated-overlay { display: none; } /* Use JS to show */
+#defeated-overlay.active { display: flex; }
+.defeated-content { text-align: center; color: white; }
+.defeated-content h1 { font-size: 2.5rem; }
 
 /* Spinner */
 .spinner {
