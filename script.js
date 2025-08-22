@@ -46,7 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
         guess: document.getElementById('btn-guess'),
         assassinate: document.getElementById('btn-assassinate'),
         chatSend: document.getElementById('chat-send-btn'),
-        backToHome: document.getElementById('btn-back-to-home')
+        backToHome: document.getElementById('btn-back-to-home'),
+        playAgain: document.getElementById('btn-play-again')
     };
     const lobbyElements = {
         preLobbyPlayerName: document.getElementById('pre-lobby-player-name'),
@@ -608,10 +609,16 @@ document.addEventListener('DOMContentLoaded', () => {
     buttons.guess.addEventListener('click', () => handleAction(false));
     buttons.assassinate.addEventListener('click', () => handleAction(true));
     buttons.chatSend.addEventListener('click', handleSendChat);
+    
     buttons.backToHome.addEventListener('click', () => {
         leaveRoom();
         navigateTo('home');
     });
+
+    buttons.playAgain.addEventListener('click', () => {
+        navigateTo('preLobby');
+    });
+
     inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
     gameElements.keypad.addEventListener('click', handleKeypadClick);
 
@@ -623,7 +630,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chatElements.overlay.style.display = 'flex';
         chatElements.unreadIndicator.style.display = 'none';
         isChatOpen = true;
-        // Scroll to bottom when chat is opened
         setTimeout(() => {
             chatElements.body.scrollTop = chatElements.body.scrollHeight;
         }, 0);
