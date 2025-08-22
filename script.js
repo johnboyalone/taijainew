@@ -296,10 +296,12 @@ document.addEventListener('DOMContentLoaded', () => {
         buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
 
         gameElements.turn.style.color = isMyTurn ? '#28a745' : '#6c757d';
+        
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
-            playSound(sounds.yourTurn); // ย้ายมาไว้ตรงนี้
+            playSound(sounds.yourTurn); // เล่นเสียงในเงื่อนไขนี้เท่านั้น
         }
+        
         if (targetPlayerId === currentPlayerId) { 
             gameElements.turn.textContent = `คุณคือเป้าหมาย!`; 
             gameElements.turn.style.color = '#dc3545'; 
