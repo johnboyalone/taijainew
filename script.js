@@ -17,27 +17,84 @@ let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
 let isChatOpen = false;
 
 // --- DOM Elements ---
-const pages = { home: document.getElementById('page-home'), lobby: document.getElementById('page-lobby'), game: document.getElementById('page-game') };
-const inputs = { playerName: document.getElementById('input-player-name'), roomName: document.getElementById('input-room-name'), maxPlayers: document.getElementById('input-max-players'), digitCount: document.getElementById('input-digit-count'), turnTime: document.getElementById('input-turn-time'), chat: document.getElementById('chat-input') };
-const buttons = { goToLobby: document.getElementById('btn-go-to-lobby'), createRoom: document.getElementById('btn-create-room'), leaveRoom: document.getElementById('btn-leave-room'), readyUp: document.getElementById('btn-ready-up'), delete: document.getElementById('btn-delete'), guess: document.getElementById('btn-guess'), chatSend: document.getElementById('chat-send-btn') };
-const lobbyElements = { playerName: document.getElementById('lobby-player-name'), roomListContainer: document.getElementById('room-list-container') };
-const gameElements = { roomName: document.getElementById('game-room-name'), playerList: document.getElementById('player-list'), setupSection: document.getElementById('setup-section'), waitingSection: document.getElementById('waiting-section'), gameplaySection: document.getElementById('gameplay-section'), gameDisplay: document.getElementById('game-display'), keypad: document.querySelector('.keypad'), timer: document.getElementById('timer-indicator'), target: document.getElementById('target-indicator'), turn: document.getElementById('turn-indicator'), mySecretNumber: document.querySelector('#my-secret-number-display span') };
-const historyElements = { toggleBtn: document.getElementById('history-toggle-btn'), overlay: document.getElementById('history-modal-overlay'), body: document.getElementById('history-modal-body'), closeBtn: document.getElementById('history-close-btn') };
-const chatElements = { toggleBtn: document.getElementById('chat-toggle-btn'), unreadIndicator: document.getElementById('chat-unread-indicator'), overlay: document.getElementById('chat-modal-overlay'), body: document.getElementById('chat-modal-body'), messages: null, closeBtn: document.getElementById('chat-close-btn') };
+const pages = { 
+    home: document.getElementById('page-home'), 
+    preLobby: document.getElementById('page-pre-lobby'),
+    lobbyCreate: document.getElementById('page-lobby-create'),
+    lobbyJoin: document.getElementById('page-lobby-join'),
+    game: document.getElementById('page-game') 
+};
+const inputs = { 
+    playerName: document.getElementById('input-player-name'), 
+    roomName: document.getElementById('input-room-name'), 
+    maxPlayers: document.getElementById('input-max-players'), 
+    digitCount: document.getElementById('input-digit-count'), 
+    turnTime: document.getElementById('input-turn-time'), 
+    chat: document.getElementById('chat-input') 
+};
+const buttons = { 
+    goToPreLobby: document.getElementById('btn-go-to-pre-lobby'),
+    goToCreate: document.getElementById('btn-go-to-create'),
+    goToJoin: document.getElementById('btn-go-to-join'),
+    createRoom: document.getElementById('btn-create-room'), 
+    leaveRoom: document.getElementById('btn-leave-room'), 
+    readyUp: document.getElementById('btn-ready-up'), 
+    delete: document.getElementById('btn-delete'), 
+    guess: document.getElementById('btn-guess'), 
+    chatSend: document.getElementById('chat-send-btn') 
+};
+const lobbyElements = { 
+    preLobbyPlayerName: document.getElementById('pre-lobby-player-name'),
+    roomListContainer: document.getElementById('room-list-container') 
+};
+const gameElements = { 
+    roomName: document.getElementById('game-room-name'), 
+    playerList: document.getElementById('player-list'), 
+    setupSection: document.getElementById('setup-section'), 
+    waitingSection: document.getElementById('waiting-section'), 
+    gameplaySection: document.getElementById('gameplay-section'), 
+    gameDisplay: document.getElementById('game-display'), 
+    keypad: document.querySelector('.keypad'), 
+    timer: document.getElementById('timer-indicator'), 
+    target: document.getElementById('target-indicator'), 
+    turn: document.getElementById('turn-indicator'), 
+    mySecretNumber: document.querySelector('#my-secret-number-display span') 
+};
+const historyElements = { 
+    toggleBtn: document.getElementById('history-toggle-btn'), 
+    overlay: document.getElementById('history-modal-overlay'), 
+    body: document.getElementById('history-modal-body'), 
+    closeBtn: document.getElementById('history-close-btn') 
+};
+const chatElements = { 
+    toggleBtn: document.getElementById('chat-toggle-btn'), 
+    unreadIndicator: document.getElementById('chat-unread-indicator'), 
+    overlay: document.getElementById('chat-modal-overlay'), 
+    body: document.getElementById('chat-modal-body'), 
+    messages: null, 
+    closeBtn: document.getElementById('chat-close-btn') 
+};
 
 // --- Navigation ---
-function navigateTo(pageName) { Object.values(pages).forEach(p => p.style.display = 'none'); if (pages[pageName]) pages[pageName].style.display = 'block'; }
+function navigateTo(pageName) { 
+    Object.values(pages).forEach(p => p.style.display = 'none'); 
+    if (pages[pageName]) pages[pageName].style.display = 'block'; 
+}
 
 // --- Lobby Logic ---
-function handleGoToLobby() {
+function handleGoToPreLobby() {
     const name = inputs.playerName.value.trim();
     if (!name) { alert('กรุณากรอกชื่อ'); return; }
     playerName = name;
     sessionStorage.setItem('playerName', playerName);
-    lobbyElements.playerName.textContent = playerName;
+    lobbyElements.preLobbyPlayerName.textContent = playerName;
     if (!currentPlayerId) currentPlayerId = database.ref().push().key;
+    navigateTo('preLobby');
+}
+
+function handleGoToJoin() {
     listenToRooms();
-    navigateTo('lobby');
+    navigateTo('lobbyJoin');
 }
 
 function createRoom() {
@@ -49,7 +106,11 @@ function createRoom() {
         createdAt: firebase.database.ServerValue.TIMESTAMP,
         players: {},
         status: 'waiting',
-        config: { maxPlayers: parseInt(inputs.maxPlayers.value), digitCount: parseInt(inputs.digitCount.value), turnTime: parseInt(inputs.turnTime.value) }
+        config: { 
+            maxPlayers: parseInt(inputs.maxPlayers.value), 
+            digitCount: parseInt(inputs.digitCount.value), 
+            turnTime: parseInt(inputs.turnTime.value) 
+        }
     }).then(() => joinRoom(currentRoomId, roomName));
 }
 
@@ -127,7 +188,6 @@ function updateGameUI(roomData) {
 
     const { playerOrder, players, targetPlayerIndex, attackerTurnIndex, status, config, turnStartTime } = roomData;
     
-    // Show my secret number
     if (players[currentPlayerId] && players[currentPlayerId].secretNumber) {
         gameElements.mySecretNumber.textContent = players[currentPlayerId].secretNumber;
     }
@@ -345,7 +405,7 @@ function leaveRoom() {
     gameElements.setupSection.style.display = 'block';
     gameElements.waitingSection.style.display = 'none';
     
-    navigateTo('lobby');
+    navigateTo('preLobby');
 }
 
 function handleReadyUp() {
@@ -378,7 +438,9 @@ function handleDelete() {
 }
 
 // --- Event Listeners ---
-buttons.goToLobby.addEventListener('click', handleGoToLobby);
+buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
+buttons.goToCreate.addEventListener('click', () => navigateTo('lobbyCreate'));
+buttons.goToJoin.addEventListener('click', handleGoToJoin);
 buttons.createRoom.addEventListener('click', createRoom);
 buttons.leaveRoom.addEventListener('click', leaveRoom);
 buttons.readyUp.addEventListener('click', handleReadyUp);
@@ -400,7 +462,7 @@ chatElements.toggleBtn.addEventListener('click', () => {
 });
 chatElements.closeBtn.addEventListener('click', () => {
     chatElements.overlay.style.display = 'none';
-isChatOpen = false;
+    isChatOpen = false;
 });
 chatElements.overlay.addEventListener('click', (e) => {
     if (e.target === chatElements.overlay) {
