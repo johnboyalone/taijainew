@@ -60,6 +60,7 @@ h1, h2, h3 {
 .btn-primary { background-color: var(--primary-color); color: white; }
 .btn-secondary { background-color: var(--secondary-color); color: white; }
 .btn-danger { background-color: var(--danger-color); color: white; }
+.btn-success { background-color: var(--success-color); color: white; }
 .btn-icon {
     background: none;
     border: none;
@@ -365,17 +366,17 @@ input[type="text"], select {
     border: 2px solid white;
 }
 
-/* Floating Chat Message (แก้ไขตำแหน่ง) */
+/* Floating Chat Message */
 #floating-chat-container {
     position: absolute;
-    bottom: 50px; /* ปรับตำแหน่งให้อยู่เหนือปุ่มขึ้นมาเล็กน้อย */
-    right: 10px;  /* จัดให้อยู่ใกล้ๆ ปุ่ม */
-    width: 220px; /* ขยายความกว้างเล็กน้อย */
+    bottom: 50px; 
+    right: 10px;  
+    width: 220px; 
     display: flex;
     flex-direction: column;
-    align-items: flex-end; /* จัดให้ข้อความชิดขวา */
+    align-items: flex-end; 
     pointer-events: none;
-    z-index: 1100; /* ทำให้อยู่เหนือองค์ประกอบอื่น */
+    z-index: 1100; 
 }
 .floating-chat-bubble {
     background-color: rgba(0,0,0,0.75);
@@ -433,7 +434,7 @@ input[type="text"], select {
     z-index: 2000;
     opacity: 0;
     transition: opacity 0.5s;
-    pointer-events: none; /* ป้องกันการคลิกตอนซ่อนอยู่ */
+    pointer-events: none; 
 }
 #title-card {
     background: white;
@@ -446,7 +447,7 @@ input[type="text"], select {
 }
 #title-card-overlay.visible {
     opacity: 1;
-    pointer-events: auto; /* ให้คลิกได้ตอนแสดง */
+    pointer-events: auto; 
 }
 #title-card-overlay.visible #title-card {
     transform: scale(1);
