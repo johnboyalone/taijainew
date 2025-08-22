@@ -257,12 +257,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             defeatedOverlay.style.display = myPlayer.status === 'defeated' ? 'flex' : 'none';
 
-            if (roomData.status === 'waiting') {
+                        if (roomData.status === 'waiting') {
                 gameElements.setupSection.style.display = 'block';
                 gameElements.gameplaySection.style.display = 'none';
                 buttons.readyUp.disabled = myPlayer.isReady;
+                updatePlayerList(roomData); // <--- เพิ่มบรรทัดนี้เข้าไปเพื่อความแน่นอน
                 checkIfGameCanStart(roomData);
             } else if (roomData.status === 'playing') {
+            // ...
                 const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
                 if (activePlayers.length <= 1 && roomData.status !== 'finished') {
                     const winner = activePlayers.length === 1 ? activePlayers[0] : null;
