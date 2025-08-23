@@ -270,17 +270,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    function checkIfGameCanStart(roomData) {
+        function checkIfGameCanStart(roomData) {
         const players = roomData.players || {};
         const playerIds = Object.keys(players);
-        if (playerIds.length < 2) return;
+        
         const allReady = Object.values(players).every(p => p.isReady);
-        if (allReady) startGame(playerIds);
+
+        if (allReady && playerIds.length >= 2) {
+            startGame(playerIds);
+        }
     }
 
     function startGame(playerIds) {
-        roomRef.update({ status: 'playing', playerOrder: playerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+        roomRef.update({ 
+            status: 'playing', 
+            playerOrder: playerIds, 
+            targetPlayerIndex: 0, 
+            attackerTurnIndex: 0, 
+            turnStartTime: firebase.database.ServerValue.TIMESTAMP 
+        });
     }
+
 
     function updateGameUI(roomData) {
         gameElements.setupSection.style.display = 'none';
