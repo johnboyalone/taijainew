@@ -448,29 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- UI Updates ---
-    function updatePlayerList(roomData) {
-        const { players } = roomData;
-        gameElements.playerList.innerHTML = '';
-        if (!players) return;
-
-        Object.entries(players).forEach(([id, player]) => {
-            const item = document.createElement('div');
-            item.className = 'player-item';
-            if (player.status === 'defeated') item.classList.add('player-defeated');
-
-            const hpBar = `<div class="hp-bar">${[...Array(3)].map((_, i) => `<div class="hp-point ${i < player.hp ? '' : 'lost'}"></div>`).join('')}</div>`;
-            const readyStatus = roomData.status === 'waiting' ? `<span class="player-status-ready">พร้อมแล้ว</span>` : hpBar;
-
-            let recentGuessHTML = '';
-            if (player.lastGuess && (Date.now() - player.lastGuess.timestamp < 3000)) {
-                recentGuessHTML = `<span class="recent-guess">${player.lastGuess.guess}</span>`;
-            }
-
-            item.innerHTML = `<div class="player-info"><span>${player.name}</span></div> ${readyStatus} ${recentGuessHTML}`;
-            gameElements.playerList.appendChild(item);
-        });
-    }
-    function updatePersonalHistory(roomData) {
+        function updatePersonalHistory(roomData) {
         const { players, guessHistory } = roomData;
         historyElements.body.innerHTML = '';
         historyElements.preview.innerHTML = '';
@@ -747,3 +725,71 @@ document.addEventListener('DOMContentLoaded', () => {
             settings = JSON.parse(savedSettings);
             settingsElements.toggleBgm.checked = settings.isBgmEnabled;
             settingsElements.toggleSfx.checked = settings.isSfxEnabled;
+            settingsElements.toggleTheme.checked = settings.isNightMode;
+        }
+        applySettings();
+    }
+
+    // --- Event Listeners ---
+    buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
+    buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
+    buttons.goToJoin.addEventListener('click', handleGoToJoin);
+    buttons.createRoom.addEventListener('click', createRoom);
+    buttons.leaveRoom.addEventListener('click', leaveRoom);
+    buttons.readyUp.addEventListener('click', handleReadyUp);
+    buttons.delete.addEventListener('click', handleDelete);
+    buttons.guess.addEventListener('click', () => handleAction(false));
+    buttons.assassinate.addEventListener('click', () => handleAction(true));
+    buttons.chatSend.addEventListener('click', handleSendChat);
+    buttons.backToHome.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (settings.isBgmEnabled) sounds.background.pause();
+        hasInteracted = false;
+        leaveRoom();
+        navigateTo('home');
+    });
+    buttons.playAgain.addEventListener('click', () => { playSound(sounds.click); navigateTo('preLobby'); });
+    inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
+    keypadElements.keypad.addEventListener('click', handleKeypadClick);
+
+    historyElements.toggleBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'flex'; });
+    historyElements.closeBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'none'; });
+    historyElements.overlay.addEventListener('click', (e) => { if (e.target === historyElements.overlay) { playSound(sounds.click); historyElements.overlay.style.display = 'none'; } });
+
+    chatElements.toggleBtn.addEventListener('click', () => {
+        playSound(sounds.click);
+        chatElements.overlay.style.display = 'flex';
+        isChatOpen = true;
+        setTimeout(() => chatElements.body.scrollTop = chatElements.body.scrollHeight, 0);
+    });
+    chatElements.closeBtn.addEventListener('click', () => { playSound(sounds.click); chatElements.overlay.style.display = 'none'; isChatOpen = false; });
+    chatElements.overlay.addEventListener('click', (e) => { if (e.target === chatElements.overlay) { playSound(sounds.click); chatElements.overlay.style.display = 'none'; isChatOpen = false; } });
+
+    settingsElements.toggleBtn.addEventListener('click', () => { playSound(sounds.click); settingsElements.overlay.style.display = 'flex'; });
+    settingsElements.closeBtn.addEventListener('click', () => { playSound(sounds.click); settingsElements.overlay.style.display = 'none'; });
+    settingsElements.overlay.addEventListener('click', (e) => { if (e.target === settingsElements.overlay) { playSound(sounds.click); settingsElements.overlay.style.display = 'none'; } });
+    settingsElements.toggleBgm.addEventListener('change', (e) => { settings.isBgmEnabled = e.target.checked; applySettings(); });
+    settingsElements.toggleSfx.addEventListener('change', (e) => { settings.isSfxEnabled = e.target.checked; applySettings(); });
+    settingsElements.toggleTheme.addEventListener('change', (e) => { settings.isNightMode = e.target.checked; applySettings(); });
+
+    keypadElements.openBtn.addEventListener('click', () => {
+        playSound(sounds.click);
+        keypadElements.modal.style.display = 'flex';
+    });
+    keypadElements.closeBtn.addEventListener('click', () => {
+        playSound(sounds.click);
+        keypadElements.modal.style.display = 'none';
+    });
+    keypadElements.modal.addEventListener('click', (e) => {
+        if (e.target === keypadElements.modal) {
+            playSound(sounds.click);
+            keypadElements.modal.style.display = 'none';
+        }
+    });
+
+    // --- Initial Load ---
+    const savedPlayerName = sessionStorage.getItem('playerName');
+    if (savedPlayerName) inputs.playerName.value = savedPlayerName;
+    loadSettings();
+    navigateTo('home');
+});
