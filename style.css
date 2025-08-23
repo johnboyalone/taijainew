@@ -219,12 +219,12 @@ body.night-mode #my-secret-number-display span {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 80px;
     border: 2px solid var(--border-color);
     border-radius: 15px;
     position: relative;
     background-color: var(--light-color);
     transition: all 0.3s ease;
+    aspect-ratio: 1 / 1;
 }
 .player-defeated {
     opacity: 0.6;
@@ -235,8 +235,15 @@ body.night-mode #my-secret-number-display span {
     font-size: 0.9rem;
     font-weight: 500;
     margin-bottom: 8px;
-    word-break: break-all;
     text-align: center;
+    width: 100%;
+    overflow: hidden;
+}
+.player-info span {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .ready-status-ready { color: var(--ready-status-ready-color); }
 .ready-status-waiting { color: var(--ready-status-waiting-color); }
@@ -256,41 +263,25 @@ body.night-mode #my-secret-number-display span {
     top: -15px;
     left: 50%;
     transform: translateX(-50%);
-    
     background-color: var(--warning-color);
     color: var(--text-dark);
     padding: 5px 15px;
     border-radius: 12px;
     font-size: 1.5rem;
     font-weight: 600;
-    
     display: flex;
     gap: 5px;
     letter-spacing: 0;
-    
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     z-index: 10;
-    
     animation: floatUpAndFade 3s forwards ease-out;
 }
 
 @keyframes floatUpAndFade {
-    0% {
-        opacity: 0;
-        transform: translate(-50%, 10px);
-    }
-    20% {
-        opacity: 1;
-        transform: translate(-50%, -5px);
-    }
-    80% {
-        opacity: 1;
-        transform: translate(-50%, -10px);
-    }
-    100% {
-        opacity: 0;
-        transform: translate(-50%, -25px);
-    }
+    0% { opacity: 0; transform: translate(-50%, 10px); }
+    20% { opacity: 1; transform: translate(-50%, -5px); }
+    80% { opacity: 1; transform: translate(-50%, -10px); }
+    100% { opacity: 0; transform: translate(-50%, -25px); }
 }
 
 /* Game Sections */
@@ -330,6 +321,7 @@ body.night-mode #my-secret-number-display span {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
+    margin-bottom: 12px;
 }
 .key {
     padding: 18px;
@@ -349,12 +341,6 @@ body.night-mode #my-secret-number-display span {
 }
 .key-special { background-color: var(--secondary-color); }
 .key-action { background-color: var(--success-color); }
-.keypad.disabled .key {
-    background-color: var(--background-color);
-    color: var(--text-light);
-    cursor: not-allowed;
-    opacity: 0.7;
-}
 
 /* --- Modals (History, Chat, Settings) --- */
 .modal-overlay {
@@ -388,6 +374,22 @@ body.night-mode #my-secret-number-display span {
     margin-bottom: 15px;
 }
 .close-btn { font-size: 2.2rem; color: var(--text-light); background: none; border: none; cursor: pointer; padding: 0; margin: 0; line-height: 1; }
+
+/* Keypad Modal */
+.modal-overlay.bottom-sheet {
+    align-items: flex-end;
+}
+.modal-overlay.bottom-sheet .modal-content {
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+    border-radius: 20px 20px 0 0;
+    animation: slideUp 0.3s ease-out forwards;
+}
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
 
 /* History Modal & Preview */
 #history-toggle-btn {

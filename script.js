@@ -118,6 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSfx: document.getElementById('toggle-sfx'),
         toggleTheme: document.getElementById('toggle-theme')
     };
+    const keypadElements = {
+        modal: document.getElementById('keypad-modal-overlay'),
+        openBtn: document.getElementById('btn-open-keypad'),
+        closeBtn: document.getElementById('keypad-close-btn')
+    };
     const summaryElements = {
         winner: document.getElementById('summary-winner'),
         playerList: document.getElementById('summary-player-list'),
@@ -305,8 +310,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const isMyTurn = attackerPlayerId === currentPlayerId;
         const amIDefeated = players[currentPlayerId]?.status === 'defeated';
-        gameElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
-        buttons.assassinate.style.display = isMyTurn && !amIDefeated ? 'block' : 'none';
+        
+        keypadElements.openBtn.style.display = (isMyTurn && !amIDefeated) ? 'block' : 'none';
 
         gameElements.turn.style.color = 'var(--text-color)';
         if (isMyTurn) {
@@ -382,6 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
             roomRef.update(updates).then(moveToNextTurn);
             currentInput = '';
             gameElements.gameDisplay.textContent = '';
+            keypadElements.modal.style.display = 'none';
         });
     }
 
@@ -708,8 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleKeypadClick(e) {
         if (!e.target.classList.contains('key') || e.target.id === 'btn-delete' || e.target.id === 'btn-guess') return;
-        if (e.currentTarget.classList.contains('disabled')) return;
-
+        
         playSound(sounds.click);
         roomRef.child('config/digitCount').once('value', snapshot => {
             const digitCount = snapshot.val();
@@ -787,6 +792,21 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsElements.toggleBgm.addEventListener('change', (e) => { settings.isBgmEnabled = e.target.checked; applySettings(); });
     settingsElements.toggleSfx.addEventListener('change', (e) => { settings.isSfxEnabled = e.target.checked; applySettings(); });
     settingsElements.toggleTheme.addEventListener('change', (e) => { settings.isNightMode = e.target.checked; applySettings(); });
+
+    keypadElements.openBtn.addEventListener('click', () => {
+        playSound(sounds.click);
+        keypadElements.modal.style.display = 'flex';
+    });
+    keypadElements.closeBtn.addEventListener('click', () => {
+        playSound(sounds.click);
+        keypadElements.modal.style.display = 'none';
+    });
+    keypadElements.modal.addEventListener('click', (e) => {
+        if (e.target === keypadElements.modal) {
+            playSound(sounds.click);
+            keypadElements.modal.style.display = 'none';
+        }
+    });
 
     // --- Initial Load ---
     const savedPlayerName = sessionStorage.getItem('playerName');
