@@ -240,9 +240,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const myPlayer = roomData.players[currentPlayerId];
 
+            // This is the updated logic for the defeated overlay
             if (roomData.status === 'finished') {
                 defeatedOverlay.style.display = 'none';
             } else if (myPlayer) {
+                // Use 'flex' or 'block' is fine with the new CSS
                 defeatedOverlay.style.display = myPlayer.status === 'defeated' ? 'flex' : 'none';
             }
 
@@ -456,7 +458,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return { bulls, cows };
     }
-
     // --- UI Updates ---
     function updatePlayerList(roomData) {
         const { players } = roomData;
@@ -648,6 +649,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function showNextCard() {
             if (currentIndex >= playerIdsInOrder.length) {
                 summaryElements.titleCardOverlay.style.display = 'none';
+                summaryElements.titleCardOverlay.classList.remove('visible');
                 if (onComplete) onComplete();
                 return;
             }
