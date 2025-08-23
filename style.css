@@ -251,21 +251,45 @@ body.night-mode #my-secret-number-display span {
 .hp-point.lost { background: var(--border-color); }
 
 .recent-guess {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    
     background-color: var(--warning-color);
     color: var(--text-dark);
-    padding: 3px 10px;
+    padding: 5px 15px;
     border-radius: 12px;
-    font-size: 1rem;
-    font-weight: 500;
-    position: absolute;
-    top: -10px;
-    animation: fadeInOut 3s forwards;
+    font-size: 1.5rem;
+    font-weight: 600;
+    
+    display: flex;
+    gap: 5px;
+    letter-spacing: 0;
+    
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    z-index: 10;
+    
+    animation: floatUpAndFade 3s forwards ease-out;
 }
-@keyframes fadeInOut {
-    0% { opacity: 0; transform: scale(0.8); }
-    20% { opacity: 1; transform: scale(1); }
-    80% { opacity: 1; transform: scale(1); }
-    100% { opacity: 0; transform: scale(0.8); }
+
+@keyframes floatUpAndFade {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, 10px);
+    }
+    20% {
+        opacity: 1;
+        transform: translate(-50%, -5px);
+    }
+    80% {
+        opacity: 1;
+        transform: translate(-50%, -10px);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -25px);
+    }
 }
 
 /* Game Sections */
@@ -294,11 +318,12 @@ body.night-mode #my-secret-number-display span {
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 10px;
     margin-bottom: 20px;
-    letter-spacing: 8px;
     font-weight: 500;
     color: var(--text-dark);
     border: 2px solid var(--border-color);
+    letter-spacing: 0;
 }
 .keypad {
     display: grid;
@@ -376,6 +401,19 @@ body.night-mode #my-secret-number-display span {
     font-size: 0.7rem;
     line-height: 1.3;
     color: var(--text-light);
+}
+.history-preview-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.history-preview-item > span:first-child {
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+.history-preview-item > div {
+    display: flex;
+    gap: 4px;
 }
 .history-preview-item .hint-bull { color: var(--success-color-text); font-weight: bold; }
 .history-preview-item .hint-cow { color: var(--danger-color-text); font-weight: bold; }

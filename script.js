@@ -377,11 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     updates[`/players/${currentPlayerId}/stats/assassinateFails`] = (players[currentPlayerId].stats.assassinateFails || 0) + 1;
                     if (myHp <= 0) updates[`/players/${currentPlayerId}/status`] = 'defeated';
                 }
-            } else {
-                if (isCorrect) {
-                    updates[`/players/${targetPlayerId}/status`] = 'defeated';
-                    updates[`/players/${targetPlayerId}/hp`] = 0;
-                }
             }
 
             roomRef.update(updates).then(moveToNextTurn);
@@ -463,11 +458,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const readyStatus = roomData.status === 'waiting' ? (player.isReady ? `<span class="ready-status-ready">พร้อมแล้ว</span>` : `<span class="ready-status-waiting">กำลังรอ...</span>`) : hpBar;
 
             let recentGuessHTML = '';
-            if (player.lastGuess && (Date.now() - player.lastGuess.timestamp < 3000)) {
+            if (id !== currentPlayerId && player.lastGuess && (Date.now() - player.lastGuess.timestamp < 3000)) {
                 recentGuessHTML = `<span class="recent-guess">${player.lastGuess.guess}</span>`;
             }
 
-            item.innerHTML = `<div class="player-info"><span>${player.name}</span> ${recentGuessHTML}</div> ${readyStatus}`;
+            item.innerHTML = `<div class="player-info"><span>${player.name}</span></div> ${readyStatus} ${recentGuessHTML}`;
             gameElements.playerList.appendChild(item);
         });
     }
@@ -484,8 +479,8 @@ document.addEventListener('DOMContentLoaded', () => {
         myGuesses.slice(0, 3).forEach(log => {
             const previewItem = document.createElement('div');
             previewItem.className = 'history-preview-item';
-            const hints = `<span class="hint-bull">${log.bulls}</span> <span class="hint-cow">${log.cows}</span>`;
-            previewItem.innerHTML = `${log.guess} → ${hints}`;
+            const hints = `<div><span class="hint-bull">${log.bulls}</span><span class="hint-cow">${log.cows}</span></div>`;
+            previewItem.innerHTML = `<span>${log.guess}</span> → ${hints}`;
             historyElements.preview.appendChild(previewItem);
         });
 
