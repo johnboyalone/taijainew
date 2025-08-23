@@ -43,13 +43,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DOM Elements ---
     const pages = {
-        home: document.getElementById('page-home'),
-        preLobby: document.getElementById('page-pre-lobby'),
-        lobbyCreate: document.getElementById('page-lobby-create'),
-        lobbyJoin: document.getElementById('page-lobby-join'),
-        game: document.getElementById('page-game'),
-        summary: document.getElementById('page-summary')
-    };
+    home: document.getElementById('page-home'),
+    preLobby: document.getElementById('page-pre-lobby'),
+    lobbyCreate: document.getElementById('page-lobby-create'),
+    lobbyJoin: document.getElementById('page-lobby-join'),
+    lobbyWait: document.getElementById('page-lobby-wait'), // <-- เพิ่มบรรทัดนี้
+    game: document.getElementById('page-game'),
+    summary: document.getElementById('page-summary')
+};
     const inputs = {
         playerName: document.getElementById('input-player-name'),
         roomName: document.getElementById('input-room-name'),
@@ -176,27 +177,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function joinRoom(roomId, roomName) {
-        playSound(sounds.click);
-        currentRoomId = roomId;
-        roomRef = database.ref(`rooms/${currentRoomId}`);
-        roomRef.child('players').once('value', snapshot => {
-            roomRef.child('config').once('value', configSnapshot => {
-                const config = configSnapshot.val();
-                if (snapshot.numChildren() >= config.maxPlayers) { alert('ขออภัย, ห้องนี้เต็มแล้ว'); return; }
-                playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
-                playerRef.set({
-                    name: playerName,
-                    isReady: false,
-                    hp: 3,
-                    status: 'playing',
-                    stats: { guesses: 0, assassinateFails: 0, timeOuts: 0, correctGuesses: 0, firstBlood: false, finalKill: false }
-                });
-                playerRef.onDisconnect().remove();
-                listenToRoomUpdates();
-                navigateTo('game');
+    playSound(sounds.click);
+    currentRoomId = roomId;
+    roomRef = database.ref(`rooms/${currentRoomId}`);
+    roomRef.child('players').once('value', snapshot => {
+        roomRef.child('config').once('value', configSnapshot => {
+            const config = configSnapshot.val();
+            if (snapshot.numChildren() >= config.maxPlayers) { alert('ขออภัย, ห้องนี้เต็มแล้ว'); return; }
+            playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
+            playerRef.set({
+                name: playerName,
+                isReady: false,
+                hp: 3,
+                status: 'playing',
+                stats: { guesses: 0, assassinateFails: 0, timeOuts: 0, correctGuesses: 0, firstBlood: false, finalKill: false }
             });
+            playerRef.onDisconnect().remove();
+            listenToRoomUpdates();
+            // navigateTo('game'); // <-- ลบหรือคอมเมนต์บรรทัดนี้
+            navigateTo('lobby-wait'); // <-- เพิ่มบรรทัดนี้เข้ามาแทน
         });
-    }
+    });
+}
 
     function listenToRooms() {
         database.ref('rooms').on('value', snapshot => {
