@@ -500,8 +500,43 @@ input:checked + .slider:before { transform: translateX(26px); }
 .slider.round { border-radius: 34px; }
 .slider.round:before { border-radius: 50%; }
 
-/* --- Defeated & Summary & Title Cards --- */
-#defeated-overlay, #title-card-overlay {
+/* --- Spectator Mode & Title Cards --- */
+#defeated-banner {
+    background-color: var(--danger-color);
+    color: var(--text-dark);
+    padding: 10px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+#defeated-banner h1 {
+    font-size: 1.2rem;
+    margin: 0 0 5px 0;
+}
+#defeated-banner p {
+    font-size: 0.9rem;
+    margin: 0;
+    color: var(--text-light);
+}
+body.night-mode #defeated-banner {
+    color: var(--text-dark);
+}
+
+body.is-spectator #gameplay-section,
+body.is-spectator #btn-leave-room {
+    opacity: 0.5;
+    pointer-events: none;
+}
+body.is-spectator #my-secret-number-display {
+    opacity: 0.5;
+}
+body.is-spectator .game-header {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#title-card-overlay {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;

@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             desc: document.getElementById('title-card-desc')
         }
     };
-    const defeatedOverlay = document.getElementById('defeated-overlay');
+    const defeatedBanner = document.getElementById('defeated-banner');
 
     // --- Navigation ---
     function navigateTo(pageName) {
@@ -240,10 +240,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const myPlayer = roomData.players[currentPlayerId];
 
-            if (roomData.status === 'finished') {
-                defeatedOverlay.style.display = 'none';
-            } else if (myPlayer) {
-                defeatedOverlay.style.display = myPlayer.status === 'defeated' ? 'flex' : 'none';
+            if (myPlayer && myPlayer.status === 'defeated') {
+                document.body.classList.add('is-spectator');
+                defeatedBanner.style.display = 'block';
+            } else {
+                document.body.classList.remove('is-spectator');
+                defeatedBanner.style.display = 'none';
             }
 
             if (roomData.status === 'waiting') {
@@ -705,6 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (roomRef && roomListener) roomRef.off('value', roomListener);
         if (turnTimer) clearInterval(turnTimer);
         playerRef = null; roomRef = null; roomListener = null; currentRoomId = null; currentInput = '';
+        document.body.classList.remove('is-spectator');
         navigateTo('preLobby');
     }
 
