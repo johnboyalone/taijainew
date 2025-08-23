@@ -88,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
         waitingSection: document.getElementById('waiting-section'),
         gameplaySection: document.getElementById('gameplay-section'),
         gameDisplay: document.getElementById('game-display'),
-        keypad: document.querySelector('.keypad'),
         timer: document.getElementById('timer-indicator'),
         target: document.getElementById('target-indicator'),
         turn: document.getElementById('turn-indicator'),
@@ -103,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const chatElements = {
         toggleBtn: document.getElementById('chat-toggle-btn'),
-        unreadIndicator: document.getElementById('chat-unread-indicator'),
         overlay: document.getElementById('chat-modal-overlay'),
         body: document.getElementById('chat-modal-body'),
         messagesContainer: document.getElementById('chat-messages'),
@@ -121,7 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const keypadElements = {
         modal: document.getElementById('keypad-modal-overlay'),
         openBtn: document.getElementById('btn-open-keypad'),
-        closeBtn: document.getElementById('keypad-close-btn')
+        closeBtn: document.getElementById('keypad-close-btn'),
+        keypad: document.querySelector('#keypad-modal-overlay .keypad'),
+        assassinateBtn: document.querySelector('#keypad-modal-overlay #btn-assassinate')
     };
     const summaryElements = {
         winner: document.getElementById('summary-winner'),
@@ -312,8 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const amIDefeated = players[currentPlayerId]?.status === 'defeated';
         
         keypadElements.openBtn.style.display = (isMyTurn && !amIDefeated) ? 'block' : 'none';
+        keypadElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
+        keypadElements.assassinateBtn.style.display = (isMyTurn && !amIDefeated) ? 'block' : 'none';
 
-        gameElements.turn.style.color = 'var(--text-color)';
+        gameElements.turn.style.color = 'var(--text-dark)';
         if (isMyTurn) {
             gameElements.turn.textContent += " (ตาของคุณ!)";
             gameElements.turn.style.color = 'var(--success-color-text)';
@@ -326,10 +328,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         gameElements.timer.style.display = 'block';
         turnTimer = setInterval(() => {
-            const elapsed = (Date.now() - turnStartTime) / 1000;
+            const serverTimeOffset = roomData.serverTimeOffset || 0;
+            const estimatedServerTime = Date.now() + serverTimeOffset;
+            const elapsed = (estimatedServerTime - turnStartTime) / 1000;
             const remaining = Math.max(0, config.turnTime - elapsed);
             gameElements.timer.textContent = Math.ceil(remaining);
-            if (remaining <= 0) { clearInterval(turnTimer); if (isMyTurn) handleTimeOut(attackerPlayerId); }
+            if (remaining <= 0) { 
+                clearInterval(turnTimer); 
+                if (isMyTurn) handleTimeOut(attackerPlayerId); 
+            }
         }, 500);
 
         updatePersonalHistory(roomData);
@@ -540,9 +547,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lastMessage && lastMessage.senderId !== currentPlayerId && (Date.now() - lastMessage.timestamp < 6000)) {
             showChatMarquee(lastMessage);
         }
-        if (!isChatOpen && lastMessage && lastMessage.senderId !== currentPlayerId) {
-            chatElements.unreadIndicator.style.display = 'block';
-        }
 
         chatElements.messagesContainer.innerHTML = '';
         messages.forEach(msg => {
@@ -680,9 +684,15 @@ document.addEventListener('DOMContentLoaded', () => {
         summaryElements.playerList.innerHTML = '';
         Object.entries(roomData.players).forEach(([id, player]) => {
             const item = document.createElement('div');
-            item.className = 'player-item';
+            item.className = 'summary-player-item';
             const title = titles[id] ? `<span class="player-title">${titles[id].title}</span>` : '';
-            item.innerHTML = `<div>${player.name}<br>${title}</div> <span>${player.name === roomData.winnerName ? 'ชนะ' : 'แพ้'}</span>`;
+            const status = player.name === roomData.winnerName ? 'ชนะ' : 'แพ้';
+            item.innerHTML = `
+                <div class="summary-player-info">
+                    <span class="summary-player-name">${player.name}</span>
+                    ${title}
+                </div> 
+                <span class="summary-player-status">${status}</span>`;
             summaryElements.playerList.appendChild(item);
         });
         navigateTo('summary');
@@ -770,7 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     buttons.playAgain.addEventListener('click', () => { playSound(sounds.click); navigateTo('preLobby'); });
     inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
-    gameElements.keypad.addEventListener('click', handleKeypadClick);
+    keypadElements.keypad.addEventListener('click', handleKeypadClick);
 
     historyElements.toggleBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'flex'; });
     historyElements.closeBtn.addEventListener('click', () => { playSound(sounds.click); historyElements.overlay.style.display = 'none'; });
@@ -779,7 +789,6 @@ document.addEventListener('DOMContentLoaded', () => {
     chatElements.toggleBtn.addEventListener('click', () => {
         playSound(sounds.click);
         chatElements.overlay.style.display = 'flex';
-        chatElements.unreadIndicator.style.display = 'none';
         isChatOpen = true;
         setTimeout(() => chatElements.body.scrollTop = chatElements.body.scrollHeight, 0);
     });

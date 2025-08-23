@@ -115,16 +115,6 @@ h1 { color: var(--text-light); }
     margin: 0;
     position: relative;
 }
-#chat-unread-indicator {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 12px;
-    height: 12px;
-    background-color: #ff8fab;
-    border-radius: 50%;
-    border: 2px solid var(--light-color);
-}
 
 input[type="text"], select {
     width: 100%;
@@ -390,6 +380,12 @@ body.night-mode #my-secret-number-display span {
     from { transform: translateY(100%); }
     to { transform: translateY(0); }
 }
+#keypad-modal-overlay .keypad.disabled .key {
+    background-color: var(--background-color);
+    color: var(--text-light);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
 
 /* History Modal & Preview */
 #history-toggle-btn {
@@ -518,23 +514,46 @@ input:checked + .slider:before { transform: translateX(26px); }
     backdrop-filter: blur(8px);
     text-align: center;
 }
-#page-summary .player-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    text-align: left;
-}
+
 #page-summary #summary-winner {
     font-size: 1.8rem;
     font-weight: 500;
     color: var(--success-color-text);
     margin-bottom: 20px;
 }
+#summary-player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.summary-player-item {
+    background-color: var(--light-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+}
+.summary-player-info {
+    display: flex;
+    flex-direction: column;
+}
+.summary-player-name {
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+.summary-player-status {
+    font-weight: bold;
+    font-size: 1rem;
+}
 .player-title {
     font-size: 0.9rem;
     color: var(--text-light);
     font-style: italic;
 }
+
 #title-card {
     background: var(--light-color);
     color: var(--text-dark);
