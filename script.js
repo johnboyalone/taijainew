@@ -14,8 +14,9 @@ const database = firebase.database();
 // --- Global State ---
 let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
+let defeatedMessageTimer = null; // Timer for the defeated message
 let isChatOpen = false;
-let hasInteracted = false; // สำหรับเช็คการเล่นเสียงครั้งแรก
+let hasInteracted = false; // For checking the first sound play
 
 // --- Settings State ---
 let settings = {
@@ -188,6 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         currentRoomId = roomId;
         roomRef = database.ref(`rooms/${currentRoomId}`);
+        // Reset player status when joining a new room
+        sessionStorage.setItem('playerStatus', 'playing');
         roomRef.child('players').once('value', snapshot => {
             roomRef.child('config').once('value', configSnapshot => {
                 const config = configSnapshot.val();
@@ -239,13 +242,22 @@ document.addEventListener('DOMContentLoaded', () => {
             updateChat(roomData.chat);
 
             const myPlayer = roomData.players[currentPlayerId];
+            const previousPlayerState = sessionStorage.getItem('playerStatus');
 
-            // This is the updated logic for the defeated overlay
+            // Logic for the defeated message
             if (roomData.status === 'finished') {
-                defeatedOverlay.style.display = 'none';
+                defeatedOverlay.style.display = 'none'; // Hide when game is over
             } else if (myPlayer) {
-                // Use 'flex' or 'block' is fine with the new CSS
-                defeatedOverlay.style.display = myPlayer.status === 'defeated' ? 'flex' : 'none';
+                // Check if the status just changed to 'defeated'
+                if (myPlayer.status === 'defeated' && previousPlayerState !== 'defeated') {
+                    showDefeatedMessage(); // Call the function to show the message for 3 seconds
+                }
+            }
+            // Store the current status to check against in the next update
+            if (myPlayer) {
+                sessionStorage.setItem('playerStatus', myPlayer.status);
+            } else {
+                sessionStorage.removeItem('playerStatus');
             }
 
             if (roomData.status === 'waiting') {
@@ -458,7 +470,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return { bulls, cows };
     }
+
     // --- UI Updates ---
+    function showDefeatedMessage() {
+        // If there's an existing timer, clear it
+        if (defeatedMessageTimer) {
+            clearTimeout(defeatedMessageTimer);
+        }
+
+        const overlay = defeatedOverlay;
+        overlay.style.display = 'block'; // Make it visible
+        overlay.classList.remove('hide');
+        overlay.classList.add('show');
+
+        // Set a timer for 3 seconds (3000ms) to hide the message
+        defeatedMessageTimer = setTimeout(() => {
+            overlay.classList.remove('show');
+            overlay.classList.add('hide');
+            // Hide the element completely after the animation ends
+            setTimeout(() => {
+                if (overlay.classList.contains('hide')) { // check if it should still be hidden
+                    overlay.style.display = 'none';
+                }
+            }, 500); // 500ms is the transition duration in CSS
+        }, 3000);
+    }
     function updatePlayerList(roomData) {
         const { players } = roomData;
         gameElements.playerList.innerHTML = '';

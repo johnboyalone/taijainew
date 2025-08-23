@@ -491,42 +491,51 @@ input:checked + .slider:before { transform: translateX(26px); }
 #defeated-overlay {
     /* --- Core Positioning --- */
     position: fixed;
-    /* ตำแหน่ง: เราจะวางไว้เหนือ player-list ซึ่งปกติจะอยู่ประมาณ 20-25% จากด้านบน */
-    top: 25%; 
+    top: 15%; /* ปรับตำแหน่งขึ้นไปอีกนิด */
     left: 50%;
-    transform: translate(-50%, -50%); /* จัดกึ่งกลางทั้งแนวนอนและแนวตั้ง */
-    
+    transform: translate(-50%, -50%) scale(0.9); /* Start slightly smaller */
+
     /* --- Sizing & Display --- */
-    width: 90%;      /* ทำให้แถบมีความกว้างเกือบเต็มจอ */
-    max-width: 450px; /* แต่ไม่กว้างเกินขนาดของ card หลัก */
+    width: auto; /* ให้ความกว้างพอดีกับเนื้อหา */
     height: auto;
     display: none;   /* ซ่อนไว้ตอนเริ่มต้น */
-    justify-content: center; /* เพิ่มเพื่อให้ flex ทำงานกับ text-align */
-    align-items: center;     /* เพิ่มเพื่อให้ flex ทำงานกับ text-align */
-    z-index: 998;    /* อยู่เหนือองค์ประกอบอื่น แต่ใต้ modal */
+    z-index: 998;
 
-    /* --- Styling (ให้เหมือนป้ายประกาศ) --- */
-    background-color: #e56b6f; /* สีแดงทึบ (var(--danger-color-text)) */
+    /* --- Styling (ทำให้เล็กลงและสวยขึ้น) --- */
+    background-color: var(--danger-color-text);
     color: white;
-    padding: 15px 20px;
-    border-radius: 8px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+    padding: 10px 25px; /* ลด Padding แนวตั้งลง */
+    border-radius: 50px; /* ทำให้เป็นแคปซูล */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     text-align: center;
-    
-    /* --- Text Styling --- */
-    font-size: 1.5rem; /* ขนาดตัวอักษร */
-    font-weight: 600;  /* ความหนาตัวอักษร */
-    text-transform: uppercase; /* ทำให้เป็นตัวพิมพ์ใหญ่ทั้งหมด */
-    letter-spacing: 1.5px;   /* ระยะห่างตัวอักษร */
 
-    /* --- Animation --- */
-    animation: fadeInScaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    /* --- Text Styling (ปรับให้เล็กลง) --- */
+    font-size: 1.1rem; /* ลดขนาดฟอนต์ */
+    font-weight: 500;
+    text-transform: none; /* ไม่ต้องเป็นตัวพิมพ์ใหญ่แล้ว */
+    letter-spacing: 0.5px;
+
+    /* --- Animation & Transition --- */
+    opacity: 0; /* เริ่มต้นให้โปร่งใส */
+    transition: opacity 0.4s ease, transform 0.4s ease; /* เพิ่ม transition */
 }
 
 /* We don't need defeated-content anymore */
 .defeated-content {
     /* This can be empty or removed */
 }
+
+/* Add classes for showing and hiding the overlay */
+#defeated-overlay.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+#defeated-overlay.hide {
+    opacity: 0;
+    transform: translate(-50%, -70%) scale(0.9); /* ทำให้เลื่อนขึ้นเล็กน้อยตอนหายไป */
+}
+
 
 #title-card-overlay {
     position: fixed;
@@ -640,15 +649,4 @@ input:checked + .slider:before { transform: translateX(26px); }
 @keyframes marquee {
     0% { transform: translateX(100%); }
     100% { transform: translateX(-100%); }
-}
-
-@keyframes fadeInScaleUp {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.8);
-    }
-    to {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-    }
 }
