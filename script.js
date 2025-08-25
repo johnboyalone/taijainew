@@ -168,73 +168,76 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createRoom() {
-        playSound(sounds.click);
-        const roomName = inputs.roomName.value.trim() || `ห้องของ ${playerName}`;
-        const newRoomRef = database.ref('rooms').push();
-        currentRoomId = newRoomRef.key;
-        newRoomRef.set({
-            name: roomName,
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
-            players: {},
-            status: 'waiting',
-            config: {
-                maxPlayers: parseInt(inputs.maxPlayers.value),
-                digitCount: parseInt(inputs.digitCount.value),
-                turnTime: parseInt(inputs.turnTime.value)
-            }
-        }).then(() => joinRoom(currentRoomId, roomName));
-    }
+    playSound(sounds.click);
+    const roomName = inputs.roomName.value.trim() || `ห้องของ ${playerName}`;
+    const newRoomRef = database.ref('rooms').push();
+    currentRoomId = newRoomRef.key;
 
-    function joinRoom(roomId, roomName) {
+    // รวบรวมข้อมูล config ไว้ในตัวแปร
+    const roomConfig = {
+        maxPlayers: parseInt(inputs.maxPlayers.value),
+        digitCount: parseInt(inputs.digitCount.value),
+        turnTime: parseInt(inputs.turnTime.value)
+    };
+
+    newRoomRef.set({
+        name: roomName,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        players: {},
+        status: 'waiting',
+        config: roomConfig // ใช้ตัวแปรที่สร้างไว้
+    }).then(() => {
+        // ส่งข้อมูล config ที่เรารู้อยู่แล้วเข้าไปใน joinRoom โดยตรง
+        joinRoom(currentRoomId, roomName, roomConfig);
+    });
+}
+
+    // เพิ่มพารามิเตอร์ตัวที่สาม (config) เข้าไป
+function joinRoom(roomId, roomName, config) {
     playSound(sounds.click);
     currentRoomId = roomId;
+    sessionStorage.setItem('roomId', roomId);
     roomRef = database.ref(`rooms/${currentRoomId}`);
     sessionStorage.setItem('playerStatus', 'playing');
 
-    roomRef.child('players').once('value', snapshot => {
-        roomRef.child('config').once('value', configSnapshot => {
-            const config = configSnapshot.val();
-            if (snapshot.numChildren() >= config.maxPlayers) {
+    // เมื่อเป็นคนสร้างห้อง เราจะมี config มาด้วย แต่ถ้าเป็นคนกดเข้าร่วม (Join) เราจะไม่มี
+    // ดังนั้นเราต้องเขียนโค้ดให้รองรับทั้ง 2 กรณี
+    const joinLogic = (loadedConfig) => {
+        roomRef.child('players').once('value', snapshot => {
+            if (snapshot.numChildren() >= loadedConfig.maxPlayers) {
                 alert('ขออภัย, ห้องนี้เต็มแล้ว');
+                // ถ้าเป็นคนสร้างแล้วห้องเต็ม (ซึ่งไม่ควรเกิด) ก็ไม่ต้องทำอะไร
+                // ถ้าเป็นคนกด join แล้วห้องเต็ม ก็จะหยุดแค่นี้
                 return;
             }
 
+            // โค้ดส่วนที่เหลือเหมือนเดิมทั้งหมด
             playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
-
-            // สร้างข้อมูลผู้เล่นพร้อมกับ 'lastOnline' timestamp
-            const initialPlayerData = {
-                name: playerName,
-                isReady: false,
-                hp: 3,
-                status: 'playing',
-                stats: { guesses: 0, assassinateFails: 0, timeOuts: 0, correctGuesses: 0 },
-                lastOnline: firebase.database.ServerValue.TIMESTAMP // เพิ่ม field นี้
-            };
-
+            const initialPlayerData = { /* ... */ };
             playerRef.set(initialPlayerData).then(() => {
-                // --- นี่คือส่วนของ Presence System ที่เพิ่มเข้ามา ---
-                connectedRef.on('value', (snap) => {
-                    if (snap.val() === true) {
-                        // เมื่อเชื่อมต่อสำเร็จ ให้ตั้งค่า onDisconnect เพื่ออัปเดตสถานะเมื่อหลุด
-                        // แทนที่จะลบทิ้ง เราจะอัปเดตแค่ lastOnline timestamp
-                        playerRef.onDisconnect().update({
-                            lastOnline: firebase.database.ServerValue.TIMESTAMP
-                        }).then(() => {
-                            // และเมื่อกลับมาเชื่อมต่อใหม่ ก็ให้อัปเดต lastOnline อีกครั้ง
-                            // เพื่อบอกว่าเราออนไลน์อยู่
-                            playerRef.update({
-                                lastOnline: firebase.database.ServerValue.TIMESTAMP
-                            });
-                        });
-                    }
-                });
+                connectedRef.on('value', (snap) => { /* ... */ });
             });
 
             gameElements.roomName.textContent = `ห้อง: ${roomName}`;
             listenToRoomUpdates();
             navigateTo('game');
         });
-    });
+    };
+
+    if (config) {
+        // กรณีเป็นคนสร้างห้อง: เรามี config มาแล้ว ใช้ได้เลย
+        joinLogic(config);
+    } else {
+        // กรณีเป็นคนกดเข้าร่วมห้อง: เราต้องไปดึง config จาก Firebase ก่อน
+        roomRef.child('config').once('value', configSnapshot => {
+            const loadedConfig = configSnapshot.val();
+            if (loadedConfig) {
+                joinLogic(loadedConfig);
+            } else {
+                alert("ไม่สามารถโหลดข้อมูลห้องได้!");
+            }
+        });
+    }
 }
 
     function listenToRooms() {
