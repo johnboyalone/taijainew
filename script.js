@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         turnTime: document.getElementById('input-turn-time'),
         chat: document.getElementById('chat-input')
     };
-        const buttons = {
+    const buttons = {
         goToPreLobby: document.getElementById('btn-go-to-pre-lobby'),
         goToCreate: document.getElementById('btn-go-to-create'),
         goToJoin: document.getElementById('btn-go-to-join'),
@@ -74,13 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
         delete: document.getElementById('btn-delete'),
         guess: document.getElementById('btn-guess'),
         assassinate: document.getElementById('btn-assassinate'),
-        chatSend: document.getElementById('btn-chat-send-btn'),
+        chatSend: document.getElementById('chat-send-btn'),
         backToHome: document.getElementById('btn-back-to-home'),
-        playAgain: document.getElementById('btn-play-again'),
-        // ปุ่ม "ย้อนกลับ" จากหน้า pre-lobby ที่เพิ่มเข้ามา
-        backToHomeFromPreLobby: document.getElementById('btn-back-to-home-from-prelobby')
+        playAgain: document.getElementById('btn-play-again')
     };
-
     const lobbyElements = {
         preLobbyPlayerName: document.getElementById('pre-lobby-player-name'),
         roomListContainer: document.getElementById('room-list-container')
@@ -120,14 +117,13 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSfx: document.getElementById('toggle-sfx'),
         toggleTheme: document.getElementById('toggle-theme')
     };
-        const keypadElements = {
+    const keypadElements = {
         modal: document.getElementById('keypad-modal-overlay'),
         openBtn: document.getElementById('btn-open-keypad'),
         closeBtn: document.getElementById('keypad-close-btn'),
         keypad: document.querySelector('#keypad-modal-overlay .keypad'),
         assassinateBtn: document.querySelector('#keypad-modal-overlay #btn-assassinate')
     };
-
     const summaryElements = {
         winner: document.getElementById('summary-winner'),
         playerList: document.getElementById('summary-player-list'),
@@ -351,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
         roomRef.update({ status: 'playing', playerOrder: playerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
     }
 
-        function updateGameUI(roomData) {
+    function updateGameUI(roomData) {
         gameElements.setupSection.style.display = 'none';
         gameElements.waitingSection.style.display = 'none';
         gameElements.gameplaySection.style.display = 'block';
@@ -382,13 +378,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const isMyTurn = attackerPlayerId === currentPlayerId;
         const amIDefeated = players[currentPlayerId]?.status === 'defeated';
         
-        // --- ส่วนที่แก้ไขปัญหา Keypad ---
-        // เปลี่ยนจากการซ่อนปุ่ม เป็นการเปิด/ปิดการใช้งานแทน
-        const canGuess = isMyTurn && !amIDefeated;
-        keypadElements.openBtn.disabled = !canGuess; // เปิด/ปิดการใช้งานปุ่ม
-        keypadElements.keypad.classList.toggle('disabled', !canGuess);
-        keypadElements.assassinateBtn.style.display = canGuess ? 'block' : 'none';
-        // --- จบส่วนแก้ไข ---
+        keypadElements.openBtn.style.display = (isMyTurn && !amIDefeated) ? 'block' : 'none';
+        keypadElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
+        keypadElements.assassinateBtn.style.display = (isMyTurn && !amIDefeated) ? 'block' : 'none';
 
         gameElements.turn.style.color = 'var(--text-dark)';
         if (isMyTurn) {
@@ -860,7 +852,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
-    // --- Event Listeners ---
     buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
     buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
     buttons.goToJoin.addEventListener('click', handleGoToJoin);
@@ -879,27 +870,6 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('home');
     });
     buttons.playAgain.addEventListener('click', () => { playSound(sounds.click); navigateTo('preLobby'); });
-    
-    // --- ส่วนที่แก้ไขปุ่มย้อนกลับ ---
-    // ปุ่มย้อนกลับจากหน้า Pre-Lobby ไปหน้า Home
-    document.getElementById('btn-back-from-prelobby').addEventListener('click', () => {
-        playSound(sounds.click);
-        navigateTo('home');
-    });
-
-    // ปุ่มย้อนกลับจากหน้า Create Lobby ไปหน้า Pre-Lobby
-    document.getElementById('btn-back-from-create').addEventListener('click', () => {
-        playSound(sounds.click);
-        navigateTo('preLobby');
-    });
-
-    // ปุ่มย้อนกลับจากหน้า Join Lobby ไปหน้า Pre-Lobby
-    document.getElementById('btn-back-from-join').addEventListener('click', () => {
-        playSound(sounds.click);
-        navigateTo('preLobby');
-    });
-    // --- จบส่วนแก้ไขปุ่มย้อนกลับ ---
-
     inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
     keypadElements.keypad.addEventListener('click', handleKeypadClick);
 

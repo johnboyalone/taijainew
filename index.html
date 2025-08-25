@@ -28,7 +28,6 @@
             <p>คุณต้องการทำอะไร?</p>
             <button id="btn-go-to-create" class="btn btn-primary">สร้างห้องใหม่</button>
             <button id="btn-go-to-join" class="btn btn-secondary">เข้าร่วมห้อง</button>
-            <button id="btn-back-from-prelobby" class="btn">ย้อนกลับไปหน้าแรก</button>
         </div>
     </div>
 
@@ -68,7 +67,6 @@
                 </select>
             </div>
             <button id="btn-create-room" class="btn btn-primary">สร้างห้อง</button>
-            <button id="btn-back-from-create" class="btn">ย้อนกลับ</button>
         </div>
     </div>
 
@@ -79,32 +77,22 @@
             <div id="room-list-container">
                 <p>กำลังโหลดห้อง...</p>
             </div>
-            <button id="btn-back-from-join" class="btn">ย้อนกลับ</button>
         </div>
     </div>
 
     <!-- หน้าเกม -->
     <div id="page-game" class="page" style="display: none;">
-        <div id="defeated-banner" style="display: none;">
-            <h1>คุณถูกกำจัดแล้ว</h1>
-            <p>แต่ยังสามารถดูเพื่อนเล่นและแชทได้</p>
-        </div>
-
         <div class="game-header">
-            <div class="header-left">
-                <button id="history-toggle-btn" class="btn-icon">
-                    📜
-                    <div id="history-preview"></div>
+            <h2 id="game-room-name">ห้อง: ...</h2>
+            <div class="game-header-buttons">
+                <!-- เปลี่ยนเป็น Marquee Container -->
+                <div id="chat-marquee-container"></div>
+                <button id="history-toggle-btn" class="btn-icon">📜</button>
+                <button id="chat-toggle-btn" class="btn-icon">
+                    💬<span id="chat-unread-indicator" style="display: none;"></span>
                 </button>
             </div>
-            <h2 id="game-room-name">ห้อง: ...</h2>
-            <div class="header-right">
-                <button id="settings-toggle-btn" class="btn-icon">⚙️</button>
-                <button id="chat-toggle-btn" class="btn-icon">💬</button>
-            </div>
         </div>
-
-        <div id="chat-marquee-container"></div>
 
         <div id="my-secret-number-display">เลขลับของคุณ: <span>????</span></div>
 
@@ -130,7 +118,16 @@
                 <div id="target-indicator">เป้าหมาย: ...</div>
                 <div id="turn-indicator">ผู้ทาย: ...</div>
             </div>
-            <button id="btn-open-keypad" class="btn btn-primary">กดเพื่อทาย</button>
+            <div id="game-display"></div>
+            <div class="keypad">
+                <button class="key">1</button> <button class="key">2</button> <button class="key">3</button>
+                <button class="key">4</button> <button class="key">5</button> <button class="key">6</button>
+                <button class="key">7</button> <button class="key">8</button> <button class="key">9</button>
+                <button id="btn-delete" class="key key-special">ลบ</button>
+                <button class="key">0</button>
+                <button id="btn-guess" class="key key-action">ทาย</button>
+            </div>
+            <button id="btn-assassinate" class="btn btn-danger">ตุยซะเถอะ!</button>
         </div>
 
         <button id="btn-leave-room" class="btn btn-secondary">ออกจากห้อง</button>
@@ -164,62 +161,11 @@
         </div>
     </div>
 
-    <!-- Pop-up ตั้งค่า -->
-    <div id="settings-modal-overlay" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>ตั้งค่า</h3>
-                <button id="settings-close-btn" class="close-btn">&times;</button>
-            </div>
-            <div id="settings-modal-body">
-                <div class="settings-group">
-                    <h4>เสียง</h4>
-                    <div class="setting-item">
-                        <span>เพลงพื้นหลัง (BGM)</span>
-                        <label class="switch">
-                            <input type="checkbox" id="toggle-bgm" checked>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="setting-item">
-                        <span>เอฟเฟกต์เสียง (SFX)</span>
-                        <label class="switch">
-                            <input type="checkbox" id="toggle-sfx" checked>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                </div>
-                <div class="settings-group">
-                    <h4>การแสดงผล</h4>
-                    <div class="setting-item">
-                        <span>โหมดกลางคืน</span>
-                        <label class="switch">
-                            <input type="checkbox" id="toggle-theme">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pop-up แป้นพิมพ์ -->
-    <div id="keypad-modal-overlay" class="modal-overlay bottom-sheet" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>ตาของคุณ: ทายเลข</h3>
-                <button id="keypad-close-btn" class="close-btn">&times;</button>
-            </div>
-            <div id="game-display"></div>
-            <div class="keypad">
-                <button class="key">1</button> <button class="key">2</button> <button class="key">3</button>
-                <button class="key">4</button> <button class="key">5</button> <button class="key">6</button>
-                <button class="key">7</button> <button class="key">8</button> <button class="key">9</button>
-                <button id="btn-delete" class="key key-special">ลบ</button>
-                <button class="key">0</button>
-                <button id="btn-guess" class="key key-action">เช็ค</button>
-            </div>
-            <button id="btn-assassinate" class="btn btn-danger">ตุยซะเถอะ!</button>
+    <!-- หน้าจอสำหรับผู้เล่นที่แพ้ -->
+    <div id="defeated-overlay" style="display: none;">
+        <div class="defeated-content">
+            <h1>คุณถูกกำจัดแล้ว</h1>
+            <p>แต่ยังสามารถดูเพื่อนเล่นและแชทได้</p>
         </div>
     </div>
 
