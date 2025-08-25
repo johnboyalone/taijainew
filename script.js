@@ -145,21 +145,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Lobby Logic ---
     function handleGoToPreLobby() {
-        playSound(sounds.click);
-        if (!hasInteracted) {
-            hasInteracted = true;
-            if (settings.isBgmEnabled) {
-                sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
-            }
+    playSound(sounds.click);
+    if (!hasInteracted) {
+        hasInteracted = true;
+        if (settings.isBgmEnabled) {
+            sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
         }
-        const name = inputs.playerName.value.trim();
-        if (!name) { alert('กรุณากรอกชื่อ'); return; }
-        playerName = name;
-        sessionStorage.setItem('playerName', playerName);
-        lobbyElements.preLobbyPlayerName.textContent = playerName;
-        if (!currentPlayerId) currentPlayerId = database.ref().push().key;
-        navigateTo('preLobby');
     }
+    const name = inputs.playerName.value.trim();
+    if (!name) { 
+        alert('กรุณากรอกชื่อ'); 
+        return; 
+    }
+    playerName = name;
+    sessionStorage.setItem('playerName', playerName);
+    lobbyElements.preLobbyPlayerName.textContent = playerName;
+
+    // --- ส่วนที่แก้ไขและเพิ่มเติม ---
+    // ตรวจสอบก่อนว่ามี ID ของผู้เล่นเก็บไว้ใน Session หรือไม่
+    // เพื่อให้จำผู้เล่นคนเดิมได้ แม้จะสลับแอปหรือรีเฟรชหน้าจอ
+    let savedPlayerId = sessionStorage.getItem('currentPlayerId');
+    if (savedPlayerId) {
+        // ถ้ามี ID เดิมอยู่แล้ว ก็ใช้ ID นั้นต่อไป
+        currentPlayerId = savedPlayerId;
+    } else {
+        // ถ้ายังไม่มี (เป็นการเข้าเล่นครั้งแรก) ให้สร้าง ID ใหม่และบันทึกไว้
+        currentPlayerId = database.ref().push().key;
+        sessionStorage.setItem('currentPlayerId', currentPlayerId);
+    }
+    console.log('Player ID set to:', currentPlayerId); // สำหรับช่วยดีบัก
+
+    navigateTo('preLobby');
+}
 
     function handleGoToJoin() {
         playSound(sounds.click);
@@ -813,6 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
+        // --- Event Listeners ---
     buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
     buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
     buttons.goToJoin.addEventListener('click', handleGoToJoin);
@@ -868,6 +886,60 @@ document.addEventListener('DOMContentLoaded', () => {
             keypadElements.modal.style.display = 'none';
         }
     });
+
+    // --- ส่วนที่แก้ไขและเพิ่มเติม: จัดการเมื่อผู้ใช้สลับแอป (Page Visibility) ---
+    document.addEventListener('visibilitychange', () => {
+        // ตรวจสอบเมื่อผู้ใช้กลับมาที่หน้าเว็บของเรา
+        if (document.visibilityState === 'visible') {
+            console.log("Page is visible again. Re-checking game state.");
+            
+            // ตรวจสอบว่าผู้เล่นยังอยู่ในห้องเกมหรือไม่
+            if (currentRoomId && roomRef) {
+                // ดึงข้อมูลล่าสุดจาก Server มาหนึ่งครั้งเพื่อ re-sync สถานะ
+                roomRef.once('value', snapshot => {
+                    if (!snapshot.exists()) {
+                        // กรณีที่ห้องถูกปิดไปแล้วระหว่างที่เราสลับแอป
+                        alert('ห้องถูกปิดไปแล้ว หรือการเชื่อมต่อมีปัญหา');
+                        leaveRoom(true);
+                    } else {
+                        // ถ้าห้องยังอยู่ ให้อัปเดต UI ทั้งหมดด้วยข้อมูลล่าสุด
+                        // เพื่อให้แน่ใจว่าสถานะเกมถูกต้องตรงกับบน Server
+                        console.log("Re-syncing UI with fresh data from server.");
+                        const roomData = snapshot.val();
+                        
+                        // เรียกฟังก์ชันอัปเดตหลักๆ ทั้งหมดอีกครั้ง
+                        updatePlayerList(roomData);
+                        updateChat(roomData.chat);
+
+                        // ตรวจสอบสถานะเกมเพื่อแสดง UI ที่ถูกต้อง
+                        if (roomData.status === 'playing') {
+                            updateGameUI(roomData);
+                        } else if (roomData.status === 'waiting') {
+                            const myPlayer = roomData.players[currentPlayerId];
+                            gameElements.setupSection.style.display = myPlayer?.isReady ? 'none' : 'block';
+                            gameElements.waitingSection.style.display = myPlayer?.isReady ? 'block' : 'none';
+                            gameElements.gameplaySection.style.display = 'none';
+                        }
+                    }
+                });
+            }
+        }
+    });
+
+
+    // --- Initial Load ---
+    const savedPlayerName = sessionStorage.getItem('playerName');
+    if (savedPlayerName) inputs.playerName.value = savedPlayerName;
+    
+    // เพิ่มการโหลด ID ผู้เล่นจาก Session Storage เพื่อให้จำได้แม้จะสลับแอปหรือรีเฟรช
+    const savedPlayerId = sessionStorage.getItem('currentPlayerId');
+    if (savedPlayerId) {
+        currentPlayerId = savedPlayerId;
+    }
+
+    loadSettings();
+    navigateTo('home');
+});
 
     // --- Initial Load ---
     const savedPlayerName = sessionStorage.getItem('playerName');
