@@ -186,24 +186,56 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function joinRoom(roomId, roomName) {
-        playSound(sounds.click);
-        currentRoomId = roomId;
-        roomRef = database.ref(`rooms/${currentRoomId}`);
-        // Reset player status when joining a new room
-        sessionStorage.setItem('playerStatus', 'playing');
-        roomRef.child('players').once('value', snapshot => {
-            roomRef.child('config').once('value', configSnapshot => {
-                const config = configSnapshot.val();
-                if (snapshot.numChildren() >= config.maxPlayers) { alert('ขออภัย, ห้องนี้เต็มแล้ว'); return; }
-                playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
-                playerRef.set({ name: playerName, isReady: false, hp: 3, status: 'playing', stats: { guesses: 0, assassinateFails: 0, timeOuts: 0, correctGuesses: 0 } });
-                playerRef.onDisconnect().remove();
-                gameElements.roomName.textContent = `ห้อง: ${roomName}`;
-                listenToRoomUpdates();
-                navigateTo('game');
+    playSound(sounds.click);
+    currentRoomId = roomId;
+    roomRef = database.ref(`rooms/${currentRoomId}`);
+    sessionStorage.setItem('playerStatus', 'playing');
+
+    roomRef.child('players').once('value', snapshot => {
+        roomRef.child('config').once('value', configSnapshot => {
+            const config = configSnapshot.val();
+            if (snapshot.numChildren() >= config.maxPlayers) {
+                alert('ขออภัย, ห้องนี้เต็มแล้ว');
+                return;
+            }
+
+            playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
+
+            // สร้างข้อมูลผู้เล่นพร้อมกับ 'lastOnline' timestamp
+            const initialPlayerData = {
+                name: playerName,
+                isReady: false,
+                hp: 3,
+                status: 'playing',
+                stats: { guesses: 0, assassinateFails: 0, timeOuts: 0, correctGuesses: 0 },
+                lastOnline: firebase.database.ServerValue.TIMESTAMP // เพิ่ม field นี้
+            };
+
+            playerRef.set(initialPlayerData).then(() => {
+                // --- นี่คือส่วนของ Presence System ที่เพิ่มเข้ามา ---
+                connectedRef.on('value', (snap) => {
+                    if (snap.val() === true) {
+                        // เมื่อเชื่อมต่อสำเร็จ ให้ตั้งค่า onDisconnect เพื่ออัปเดตสถานะเมื่อหลุด
+                        // แทนที่จะลบทิ้ง เราจะอัปเดตแค่ lastOnline timestamp
+                        playerRef.onDisconnect().update({
+                            lastOnline: firebase.database.ServerValue.TIMESTAMP
+                        }).then(() => {
+                            // และเมื่อกลับมาเชื่อมต่อใหม่ ก็ให้อัปเดต lastOnline อีกครั้ง
+                            // เพื่อบอกว่าเราออนไลน์อยู่
+                            playerRef.update({
+                                lastOnline: firebase.database.ServerValue.TIMESTAMP
+                            });
+                        });
+                    }
+                });
             });
+
+            gameElements.roomName.textContent = `ห้อง: ${roomName}`;
+            listenToRoomUpdates();
+            navigateTo('game');
         });
-    }
+    });
+}
 
     function listenToRooms() {
         database.ref('rooms').on('value', snapshot => {
@@ -228,60 +260,58 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Game Logic ---
-    function listenToRoomUpdates() {
-        if (!roomRef) return;
-        if (roomListener) roomRef.off('value', roomListener);
-        roomListener = roomRef.on('value', snapshot => {
-            if (!snapshot.exists()) {
-                alert('ห้องถูกปิดแล้ว');
-                leaveRoom();
+    function joinRoom(roomId, roomName) {
+    playSound(sounds.click);
+    currentRoomId = roomId;
+    roomRef = database.ref(`rooms/${currentRoomId}`);
+    sessionStorage.setItem('playerStatus', 'playing');
+
+    roomRef.child('players').once('value', snapshot => {
+        roomRef.child('config').once('value', configSnapshot => {
+            const config = configSnapshot.val();
+            if (snapshot.numChildren() >= config.maxPlayers) {
+                alert('ขออภัย, ห้องนี้เต็มแล้ว');
                 return;
             }
-            const roomData = snapshot.val();
-            updatePlayerList(roomData);
-            updateChat(roomData.chat);
 
-            const myPlayer = roomData.players[currentPlayerId];
-            const previousPlayerState = sessionStorage.getItem('playerStatus');
+            playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
 
-            // Logic for the defeated message
-            if (roomData.status === 'finished') {
-                defeatedOverlay.style.display = 'none'; // Hide when game is over
-            } else if (myPlayer) {
-                // Check if the status just changed to 'defeated'
-                if (myPlayer.status === 'defeated' && previousPlayerState !== 'defeated') {
-                    showDefeatedMessage(); // Call the function to show the message for 3 seconds
-                }
-            }
-            // Store the current status to check against in the next update
-            if (myPlayer) {
-                sessionStorage.setItem('playerStatus', myPlayer.status);
-            } else {
-                sessionStorage.removeItem('playerStatus');
-            }
+            // สร้างข้อมูลผู้เล่นพร้อมกับ 'lastOnline' timestamp
+            const initialPlayerData = {
+                name: playerName,
+                isReady: false,
+                hp: 3,
+                status: 'playing',
+                stats: { guesses: 0, assassinateFails: 0, timeOuts: 0, correctGuesses: 0 },
+                lastOnline: firebase.database.ServerValue.TIMESTAMP // เพิ่ม field นี้
+            };
 
-            if (roomData.status === 'waiting') {
-                gameElements.setupSection.style.display = myPlayer?.isReady ? 'none' : 'block';
-                gameElements.waitingSection.style.display = myPlayer?.isReady ? 'block' : 'none';
-                gameElements.gameplaySection.style.display = 'none';
-                checkIfGameCanStart(roomData);
-            } else if (roomData.status === 'playing') {
-                const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
-                if (activePlayers.length <= 1) {
-                    const winner = activePlayers.length === 1 ? activePlayers[0] : null;
-                    roomRef.update({
-                        status: 'finished',
-                        winnerName: winner ? winner.name : "ไม่มีผู้ชนะ"
-                    });
-                } else {
-                    updateGameUI(roomData);
-                }
-            } else if (roomData.status === 'finished' && !roomData.summaryShown) {
-                roomRef.update({ summaryShown: true });
-                endGame(roomData);
-            }
+            playerRef.set(initialPlayerData).then(() => {
+                // --- นี่คือส่วนของ Presence System ที่เพิ่มเข้ามา ---
+                connectedRef.on('value', (snap) => {
+                    if (snap.val() === true) {
+                        // เมื่อเชื่อมต่อสำเร็จ ให้ตั้งค่า onDisconnect เพื่ออัปเดตสถานะเมื่อหลุด
+                        // แทนที่จะลบทิ้ง เราจะอัปเดตแค่ lastOnline timestamp
+                        playerRef.onDisconnect().update({
+                            lastOnline: firebase.database.ServerValue.TIMESTAMP
+                        }).then(() => {
+                            // และเมื่อกลับมาเชื่อมต่อใหม่ ก็ให้อัปเดต lastOnline อีกครั้ง
+                            // เพื่อบอกว่าเราออนไลน์อยู่
+                            playerRef.update({
+                                lastOnline: firebase.database.ServerValue.TIMESTAMP
+                            });
+                        });
+                    }
+                });
+            });
+
+            gameElements.roomName.textContent = `ห้อง: ${roomName}`;
+            listenToRoomUpdates();
+            navigateTo('game');
         });
-    }
+    });
+}
+
     function checkIfGameCanStart(roomData) {
         const players = roomData.players || {};
         const playerIds = Object.keys(players);
