@@ -458,29 +458,64 @@ function joinRoom(roomId, roomName, config) {
         });
     }
 
-    function moveToNextTurn() {
-        roomRef.once('value', snapshot => {
-            const roomData = snapshot.val();
-            if (roomData.status !== 'playing') return;
+    // โค้ดที่แก้ไขใหม่ (ใช้ Transaction)
+function moveToNextTurn() {
+    if (!roomRef) return;
 
-            const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
-            const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-            if (activePlayers.length <= 1) { 
-                roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP }); 
-                return; 
-            }
+    roomRef.transaction(currentRoomData => {
+        // ถ้าไม่มีข้อมูลห้อง หรือเกมไม่ได้กำลังเล่นอยู่ ให้ยกเลิก transaction
+        if (!currentRoomData || currentRoomData.status !== 'playing') {
+            return; // Abort transaction
+        }
 
-            const currentTargetId = activePlayers[targetPlayerIndex % activePlayers.length];
-            const attackers = activePlayers.filter(id => id !== currentTargetId);
+        const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = currentRoomData;
 
-            const nextAttackerIndex = (attackerTurnIndex + 1);
-            if (nextAttackerIndex >= attackers.length) {
-                roomRef.update({ targetPlayerIndex: (targetPlayerIndex + 1), attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
-            } else {
-                roomRef.update({ attackerTurnIndex: nextAttackerIndex, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
-            }
-        });
-    }
+        // หาผู้เล่นที่ยังอยู่ในเกม (status === 'playing')
+        const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
+
+        // ถ้าเหลือผู้เล่นน้อยกว่าหรือเท่ากับ 1 คน, ไม่ต้องเปลี่ยนตา แต่รีเซ็ตเวลาเพื่อรอจบเกม
+        if (activePlayers.length <= 1) {
+            currentRoomData.turnStartTime = firebase.database.ServerValue.TIMESTAMP;
+            return currentRoomData;
+        }
+
+        // --- คำนวณตาของเป้าหมาย (Target) และผู้ทาย (Attacker) ---
+
+        // 1. หาเป้าหมายปัจจุบัน
+        const currentTargetId = activePlayers[targetPlayerIndex % activePlayers.length];
+        
+        // 2. หาผู้ทายทั้งหมด (คือผู้เล่นที่ยัง Active และไม่ใช่เป้าหมาย)
+        const attackers = activePlayers.filter(id => id !== currentTargetId);
+
+        // 3. คำนวณหาผู้ทายคนถัดไป
+        const nextAttackerTurnIndex = (attackerTurnIndex + 1);
+
+        // 4. ตรวจสอบว่าผู้ทายวนครบทุกคนหรือยัง
+        if (nextAttackerTurnIndex >= attackers.length) {
+            // ถ้าครบแล้ว: เปลี่ยนเป้าหมายคนถัดไป และเริ่มนับผู้ทายใหม่ที่ index 0
+            currentRoomData.targetPlayerIndex = (targetPlayerIndex + 1) % activePlayers.length;
+            currentRoomData.attackerTurnIndex = 0;
+        } else {
+            // ถ้ายังไม่ครบ: เปลี่ยนแค่ผู้ทายคนถัดไป
+            currentRoomData.attackerTurnIndex = nextAttackerTurnIndex;
+        }
+
+        // รีเซ็ตเวลาเริ่มตาใหม่
+        currentRoomData.turnStartTime = firebase.database.ServerValue.TIMESTAMP;
+
+        // ส่งข้อมูลที่อัปเดตแล้วกลับไป
+        return currentRoomData;
+
+    }, (error, committed, snapshot) => {
+        if (error) {
+            console.error('Transaction failed abnormally!', error);
+        } else if (!committed) {
+            console.log('Transaction not committed (aborted).');
+        } else {
+            console.log('Turn changed successfully!');
+        }
+    });
+}
 
     function calculateHints(guess, secret) {
         let bulls = 0, cows = 0;
