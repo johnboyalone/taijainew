@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         roomRef.update({ status: 'playing', playerOrder: playerIds, targetPlayerIndex: 0, attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
     }
 
-    function updateGameUI(roomData) {
+        function updateGameUI(roomData) {
         gameElements.setupSection.style.display = 'none';
         gameElements.waitingSection.style.display = 'none';
         gameElements.gameplaySection.style.display = 'block';
@@ -382,9 +382,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const isMyTurn = attackerPlayerId === currentPlayerId;
         const amIDefeated = players[currentPlayerId]?.status === 'defeated';
         
-        keypadElements.openBtn.style.display = (isMyTurn && !amIDefeated) ? 'block' : 'none';
-        keypadElements.keypad.classList.toggle('disabled', !isMyTurn || amIDefeated);
-        keypadElements.assassinateBtn.style.display = (isMyTurn && !amIDefeated) ? 'block' : 'none';
+        // --- ส่วนที่แก้ไขปัญหา Keypad ---
+        // เปลี่ยนจากการซ่อนปุ่ม เป็นการเปิด/ปิดการใช้งานแทน
+        const canGuess = isMyTurn && !amIDefeated;
+        keypadElements.openBtn.disabled = !canGuess; // เปิด/ปิดการใช้งานปุ่ม
+        keypadElements.keypad.classList.toggle('disabled', !canGuess);
+        keypadElements.assassinateBtn.style.display = canGuess ? 'block' : 'none';
+        // --- จบส่วนแก้ไข ---
 
         gameElements.turn.style.color = 'var(--text-dark)';
         if (isMyTurn) {
@@ -856,8 +860,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
-        // --- Event Listeners ---
-        // --- Event Listeners ---
+    // --- Event Listeners ---
     buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
     buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
     buttons.goToJoin.addEventListener('click', handleGoToJoin);
@@ -876,16 +879,26 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('home');
     });
     buttons.playAgain.addEventListener('click', () => { playSound(sounds.click); navigateTo('preLobby'); });
-
-    // ทำให้ปุ่ม "ย้อนกลับ" ทั้งหมดที่มี class "btn-back" ทำงาน
-    const allBackButtons = document.querySelectorAll('.btn-back');
-    allBackButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            playSound(sounds.click);
-            // เมื่อกดปุ่มย้อนกลับ ให้กลับไปที่หน้า pre-lobby เสมอ
-            navigateTo('preLobby');
-        });
+    
+    // --- ส่วนที่แก้ไขปุ่มย้อนกลับ ---
+    // ปุ่มย้อนกลับจากหน้า Pre-Lobby ไปหน้า Home
+    document.getElementById('btn-back-from-prelobby').addEventListener('click', () => {
+        playSound(sounds.click);
+        navigateTo('home');
     });
+
+    // ปุ่มย้อนกลับจากหน้า Create Lobby ไปหน้า Pre-Lobby
+    document.getElementById('btn-back-from-create').addEventListener('click', () => {
+        playSound(sounds.click);
+        navigateTo('preLobby');
+    });
+
+    // ปุ่มย้อนกลับจากหน้า Join Lobby ไปหน้า Pre-Lobby
+    document.getElementById('btn-back-from-join').addEventListener('click', () => {
+        playSound(sounds.click);
+        navigateTo('preLobby');
+    });
+    // --- จบส่วนแก้ไขปุ่มย้อนกลับ ---
 
     inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
     keypadElements.keypad.addEventListener('click', handleKeypadClick);
