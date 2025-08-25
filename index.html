@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เกมทายเลขทายใจ</title>
+    <title>เกมทายเลขมหาประลัย</title>
     <link rel="stylesheet" href="style.css">
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -14,22 +14,21 @@
     <!-- หน้าหลัก: กรอกชื่อ -->
     <div id="page-home" class="page">
         <div class="card">
-            <h1>เกมทายเลขทายใจ</h1>
-            <p>ตั้งชื่อของเจ้าเพื่อเริ่มเล่น</p>
+            <h1>เกมทายเลขมหาประลัย</h1>
+            <p>ใส่ชื่อของคุณเพื่อเริ่มเล่น</p>
             <input type="text" id="input-player-name" placeholder="ชื่อผู้เล่น..." maxlength="12">
             <button id="btn-go-to-pre-lobby" class="btn btn-primary">ไปต่อ</button>
         </div>
     </div>
 
-    <!-- หน้าคั่น: สร้าง/เข้าร่วม (มีการแก้ไขในส่วนนี้) -->
+    <!-- หน้าคั่น: สร้าง/เข้าร่วม -->
     <div id="page-pre-lobby" class="page" style="display: none;">
         <div class="card">
             <h1>สวัสดี, <span id="pre-lobby-player-name"></span>!</h1>
             <p>คุณต้องการทำอะไร?</p>
             <button id="btn-go-to-create" class="btn btn-primary">สร้างห้องใหม่</button>
             <button id="btn-go-to-join" class="btn btn-secondary">เข้าร่วมห้อง</button>
-            <!-- ปุ่ม "ย้อนกลับ" ที่เพิ่มเข้ามาใหม่ -->
-            <button id="btn-back-to-home-from-prelobby" class="btn">ย้อนกลับ</button>
+            <button class="btn-back">ย้อนกลับ</button>
         </div>
     </div>
 
@@ -69,6 +68,7 @@
                 </select>
             </div>
             <button id="btn-create-room" class="btn btn-primary">สร้างห้อง</button>
+            <button class="btn-back">ย้อนกลับ</button>
         </div>
     </div>
 
@@ -79,6 +79,7 @@
             <div id="room-list-container">
                 <p>กำลังโหลดห้อง...</p>
             </div>
+            <button class="btn-back">ย้อนกลับ</button>
         </div>
     </div>
 

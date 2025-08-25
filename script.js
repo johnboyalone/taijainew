@@ -120,13 +120,14 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSfx: document.getElementById('toggle-sfx'),
         toggleTheme: document.getElementById('toggle-theme')
     };
-    const keypadElements = {
+        const keypadElements = {
         modal: document.getElementById('keypad-modal-overlay'),
         openBtn: document.getElementById('btn-open-keypad'),
         closeBtn: document.getElementById('keypad-close-btn'),
         keypad: document.querySelector('#keypad-modal-overlay .keypad'),
         assassinateBtn: document.querySelector('#keypad-modal-overlay #btn-assassinate')
     };
+
     const summaryElements = {
         winner: document.getElementById('summary-winner'),
         playerList: document.getElementById('summary-player-list'),
@@ -856,6 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Event Listeners ---
         // --- Event Listeners ---
+        // --- Event Listeners ---
     buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
     buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
     buttons.goToJoin.addEventListener('click', handleGoToJoin);
@@ -874,11 +876,15 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('home');
     });
     buttons.playAgain.addEventListener('click', () => { playSound(sounds.click); navigateTo('preLobby'); });
-    
-    // Event Listener สำหรับปุ่ม "ย้อนกลับ" ใหม่ที่เพิ่มเข้ามา
-    buttons.backToHomeFromPreLobby.addEventListener('click', () => {
-        playSound(sounds.click);
-        navigateTo('home');
+
+    // ทำให้ปุ่ม "ย้อนกลับ" ทั้งหมดที่มี class "btn-back" ทำงาน
+    const allBackButtons = document.querySelectorAll('.btn-back');
+    allBackButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            playSound(sounds.click);
+            // เมื่อกดปุ่มย้อนกลับ ให้กลับไปที่หน้า pre-lobby เสมอ
+            navigateTo('preLobby');
+        });
     });
 
     inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
