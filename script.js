@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         turnTime: document.getElementById('input-turn-time'),
         chat: document.getElementById('chat-input')
     };
-    const buttons = {
+        const buttons = {
         goToPreLobby: document.getElementById('btn-go-to-pre-lobby'),
         goToCreate: document.getElementById('btn-go-to-create'),
         goToJoin: document.getElementById('btn-go-to-join'),
@@ -74,10 +74,13 @@ document.addEventListener('DOMContentLoaded', () => {
         delete: document.getElementById('btn-delete'),
         guess: document.getElementById('btn-guess'),
         assassinate: document.getElementById('btn-assassinate'),
-        chatSend: document.getElementById('chat-send-btn'),
+        chatSend: document.getElementById('btn-chat-send-btn'),
         backToHome: document.getElementById('btn-back-to-home'),
-        playAgain: document.getElementById('btn-play-again')
+        playAgain: document.getElementById('btn-play-again'),
+        // ปุ่ม "ย้อนกลับ" จากหน้า pre-lobby ที่เพิ่มเข้ามา
+        backToHomeFromPreLobby: document.getElementById('btn-back-to-home-from-prelobby')
     };
+
     const lobbyElements = {
         preLobbyPlayerName: document.getElementById('pre-lobby-player-name'),
         roomListContainer: document.getElementById('room-list-container')
@@ -852,6 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
+        // --- Event Listeners ---
     buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
     buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
     buttons.goToJoin.addEventListener('click', handleGoToJoin);
@@ -870,6 +874,13 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('home');
     });
     buttons.playAgain.addEventListener('click', () => { playSound(sounds.click); navigateTo('preLobby'); });
+    
+    // Event Listener สำหรับปุ่ม "ย้อนกลับ" ใหม่ที่เพิ่มเข้ามา
+    buttons.backToHomeFromPreLobby.addEventListener('click', () => {
+        playSound(sounds.click);
+        navigateTo('home');
+    });
+
     inputs.chat.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendChat(); });
     keypadElements.keypad.addEventListener('click', handleKeypadClick);
 
