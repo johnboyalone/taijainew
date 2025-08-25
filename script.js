@@ -145,38 +145,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Lobby Logic ---
     function handleGoToPreLobby() {
-    playSound(sounds.click);
-    if (!hasInteracted) {
-        hasInteracted = true;
-        if (settings.isBgmEnabled) {
-            sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
+        playSound(sounds.click);
+        if (!hasInteracted) {
+            hasInteracted = true;
+            if (settings.isBgmEnabled) {
+                sounds.background.play().catch(e => console.log("ไม่สามารถเล่นเพลงพื้นหลังได้:", e));
+            }
         }
-    }
-    const name = inputs.playerName.value.trim();
-    if (!name) { 
-        alert('กรุณากรอกชื่อ'); 
-        return; 
-    }
-    playerName = name;
-    sessionStorage.setItem('playerName', playerName);
-    lobbyElements.preLobbyPlayerName.textContent = playerName;
+        const name = inputs.playerName.value.trim();
+        if (!name) {
+            alert('กรุณากรอกชื่อ');
+            return;
+        }
 
-    // --- ส่วนที่แก้ไขและเพิ่มเติม ---
-    // ตรวจสอบก่อนว่ามี ID ของผู้เล่นเก็บไว้ใน Session หรือไม่
-    // เพื่อให้จำผู้เล่นคนเดิมได้ แม้จะสลับแอปหรือรีเฟรชหน้าจอ
-    let savedPlayerId = sessionStorage.getItem('currentPlayerId');
-    if (savedPlayerId) {
-        // ถ้ามี ID เดิมอยู่แล้ว ก็ใช้ ID นั้นต่อไป
-        currentPlayerId = savedPlayerId;
-    } else {
-        // ถ้ายังไม่มี (เป็นการเข้าเล่นครั้งแรก) ให้สร้าง ID ใหม่และบันทึกไว้
+        // สร้าง ID ใหม่เสมอเมื่อกดจากหน้า Home (เป็นการเริ่ม Session ใหม่)
         currentPlayerId = database.ref().push().key;
-        sessionStorage.setItem('currentPlayerId', currentPlayerId);
-    }
-    console.log('Player ID set to:', currentPlayerId); // สำหรับช่วยดีบัก
+        playerName = name;
 
-    navigateTo('preLobby');
-}
+        // บันทึกข้อมูลลง Session Storage
+        sessionStorage.setItem('playerName', playerName);
+        sessionStorage.setItem('currentPlayerId', currentPlayerId);
+
+        // อัปเดต UI และนำทาง
+        lobbyElements.preLobbyPlayerName.textContent = playerName;
+        navigateTo('preLobby');
+    }
 
     function handleGoToJoin() {
         playSound(sounds.click);
@@ -217,8 +210,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
+                
+                // ยกเลิก onDisconnect เก่า (ถ้ามี) ก่อนตั้งค่าใหม่ เพื่อป้องกันการทำงานซ้ำซ้อน
+                playerRef.onDisconnect().cancel();
+
                 playerRef.set({ name: playerName, isReady: false, hp: 3, status: 'playing', stats: { guesses: 0, assassinateFails: 0, timeOuts: 0, correctGuesses: 0 } });
                 
+                // ตั้งค่า onDisconnect เพื่ออัปเดตสถานะเมื่อหลุดการเชื่อมต่อ
                 playerRef.onDisconnect().update({ status: 'offline' });
 
                 const connectedRef = database.ref('.info/connected');
@@ -284,7 +282,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (myPlayer) {
                 sessionStorage.setItem('playerStatus', myPlayer.status);
             } else {
-                sessionStorage.removeItem('playerStatus');
+                // ถ้าไม่เจอข้อมูลผู้เล่นของเราในห้อง (อาจจะโดนเตะหรือบั๊ก) ให้พากลับล็อบบี้
+                if (currentRoomId) { // ตรวจสอบว่าเราคิดว่าเรายังอยู่ในห้องไหม
+                    console.error("Player data not found in room. Leaving room.");
+                    leaveRoom(true);
+                }
+                return;
             }
 
             if (roomData.status === 'waiting') {
@@ -331,6 +334,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const { playerOrder, players, targetPlayerIndex, attackerTurnIndex, config, turnStartTime } = roomData;
 
+        if (!players || !playerOrder) return; // ป้องกัน error หากข้อมูลยังไม่สมบูรณ์
+
         if (players[currentPlayerId] && players[currentPlayerId].secretNumber) {
             gameElements.mySecretNumber.textContent = players[currentPlayerId].secretNumber;
         }
@@ -340,18 +345,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
         const targetPlayerId = activePlayers[currentTargetIndexInActive];
-        const targetPlayerName = players[targetPlayerId].name;
+        const targetPlayerName = players[targetPlayerId]?.name || 'ผู้เล่นไม่ทราบชื่อ';
         gameElements.target.textContent = `เป้าหมาย: ${targetPlayerName}`;
 
         const attackers = activePlayers.filter(id => id !== targetPlayerId);
-        if (attackers.length === 0) { return; } 
+        if (attackers.length === 0) { 
+            // กรณีเหลือผู้เล่น 2 คน คนที่เป็นเป้าหมายจะไม่มีคนทาย
+            // อาจจะต้องปรับ Logic เกม หรือปล่อยให้เป็นแบบนี้แล้วรอตาถัดไป
+            gameElements.turn.textContent = `กำลังรอตาถัดไป...`;
+            keypadElements.openBtn.style.display = 'none';
+            return; 
+        } 
 
         const currentAttackerIndexInAttackers = attackerTurnIndex % attackers.length;
         const attackerPlayerId = attackers[currentAttackerIndexInAttackers];
-        const attackerPlayerName = players[attackerPlayerId].name;
-        gameElements.turn.textContent = `ผู้ทาย: ${attackerPlayerName}`;
-
+        const attackerPlayerName = players[attackerPlayerId]?.name || 'ผู้เล่นไม่ทราบชื่อ';
+        
         const isMyTurn = attackerPlayerId === currentPlayerId;
+        const amITarget = targetPlayerId === currentPlayerId;
         const amIDefeated = players[currentPlayerId]?.status === 'defeated';
         
         keypadElements.openBtn.style.display = (isMyTurn && !amIDefeated) ? 'block' : 'none';
@@ -359,14 +370,15 @@ document.addEventListener('DOMContentLoaded', () => {
         keypadElements.assassinateBtn.style.display = (isMyTurn && !amIDefeated) ? 'block' : 'none';
 
         gameElements.turn.style.color = 'var(--text-dark)';
-        if (isMyTurn) {
-            gameElements.turn.textContent += " (ตาของคุณ!)";
+        if (amITarget) {
+            gameElements.turn.textContent = `คุณคือเป้าหมาย! (ผู้ทาย: ${attackerPlayerName})`; 
+            gameElements.turn.style.color = 'var(--danger-color-text)';
+        } else if (isMyTurn) {
+            gameElements.turn.textContent = `ผู้ทาย: ${attackerPlayerName} (ตาของคุณ!)`;
             gameElements.turn.style.color = 'var(--success-color-text)';
             playSound(sounds.yourTurn);
-        }
-        if (targetPlayerId === currentPlayerId) { 
-            gameElements.turn.textContent = `คุณคือเป้าหมาย!`; 
-            gameElements.turn.style.color = 'var(--danger-color-text)';
+        } else {
+            gameElements.turn.textContent = `ผู้ทาย: ${attackerPlayerName}`;
         }
 
         gameElements.timer.style.display = 'block';
@@ -388,6 +400,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleAction(isAssassination) {
         roomRef.once('value', snapshot => {
             const roomData = snapshot.val();
+            if (!roomData || roomData.status !== 'playing') return;
+
             const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
             const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
             const targetPlayerId = activePlayers[targetPlayerIndex % activePlayers.length];
@@ -479,6 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function calculateHints(guess, secret) {
+        if (!guess || !secret) return { bulls: 0, cows: 0 }; // ป้องกัน error
         let bulls = 0, cows = 0;
         const secretChars = secret.split('');
         const guessChars = guess.split('');
@@ -525,11 +540,12 @@ document.addEventListener('DOMContentLoaded', () => {
         gameElements.playerList.innerHTML = '';
         if (!players) return;
         Object.entries(players).forEach(([id, player]) => {
-            if (player.status === 'offline') return;
+            if (player.status === 'offline') return; // ไม่ต้องแสดงผู้เล่นที่ออฟไลน์
 
             const item = document.createElement('div');
             item.className = 'player-item';
             if (player.status === 'defeated') item.classList.add('player-defeated');
+            if (id === currentPlayerId) item.classList.add('is-me'); // เพิ่มคลาสให้ตัวเอง จะได้แยกแยะง่าย
 
             const hpBar = `<div class="hp-bar">${[...Array(3)].map((_, i) => `<div class="hp-point ${i < player.hp ? '' : 'lost'}"></div>`).join('')}</div>`;
             const readyStatus = roomData.status === 'waiting' ? (player.isReady ? `<span class="ready-status-ready">พร้อมแล้ว</span>` : `<span class="ready-status-waiting">กำลังรอ...</span>`) : hpBar;
@@ -762,11 +778,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         navigateTo('summary');
     }
-
     // --- General Functions ---
     function leaveRoom(isRoomClosed = false) {
         playSound(sounds.click);
         if (playerRef && !isRoomClosed) {
+            // ใช้ onDisconnect().cancel() เพื่อยกเลิกการตั้งค่า offline ก่อนที่จะลบข้อมูลผู้เล่นเอง
+            playerRef.onDisconnect().cancel();
             playerRef.remove();
         }
         if (roomRef && roomListener) {
@@ -830,7 +847,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Listeners ---
-        // --- Event Listeners ---
     buttons.goToPreLobby.addEventListener('click', handleGoToPreLobby);
     buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
     buttons.goToJoin.addEventListener('click', handleGoToJoin);
@@ -845,7 +861,10 @@ document.addEventListener('DOMContentLoaded', () => {
         playSound(sounds.click);
         if (settings.isBgmEnabled) sounds.background.pause();
         hasInteracted = false;
-        leaveRoom(false);
+        // ล้าง session เพื่อให้เริ่มใหม่ทั้งหมด
+        sessionStorage.removeItem('currentPlayerId');
+        sessionStorage.removeItem('playerName');
+        if (playerRef) playerRef.onDisconnect().cancel(); // ยกเลิก onDisconnect ก่อนออกจากห้อง
         navigateTo('home');
     });
     buttons.playAgain.addEventListener('click', () => { playSound(sounds.click); navigateTo('preLobby'); });
@@ -887,31 +906,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- ส่วนที่แก้ไขและเพิ่มเติม: จัดการเมื่อผู้ใช้สลับแอป (Page Visibility) ---
     document.addEventListener('visibilitychange', () => {
-        // ตรวจสอบเมื่อผู้ใช้กลับมาที่หน้าเว็บของเรา
         if (document.visibilityState === 'visible') {
             console.log("Page is visible again. Re-checking game state.");
-            
-            // ตรวจสอบว่าผู้เล่นยังอยู่ในห้องเกมหรือไม่
             if (currentRoomId && roomRef) {
-                // ดึงข้อมูลล่าสุดจาก Server มาหนึ่งครั้งเพื่อ re-sync สถานะ
                 roomRef.once('value', snapshot => {
                     if (!snapshot.exists()) {
-                        // กรณีที่ห้องถูกปิดไปแล้วระหว่างที่เราสลับแอป
                         alert('ห้องถูกปิดไปแล้ว หรือการเชื่อมต่อมีปัญหา');
                         leaveRoom(true);
                     } else {
-                        // ถ้าห้องยังอยู่ ให้อัปเดต UI ทั้งหมดด้วยข้อมูลล่าสุด
-                        // เพื่อให้แน่ใจว่าสถานะเกมถูกต้องตรงกับบน Server
                         console.log("Re-syncing UI with fresh data from server.");
                         const roomData = snapshot.val();
-                        
-                        // เรียกฟังก์ชันอัปเดตหลักๆ ทั้งหมดอีกครั้ง
                         updatePlayerList(roomData);
                         updateChat(roomData.chat);
-
-                        // ตรวจสอบสถานะเกมเพื่อแสดง UI ที่ถูกต้อง
                         if (roomData.status === 'playing') {
                             updateGameUI(roomData);
                         } else if (roomData.status === 'waiting') {
@@ -926,24 +933,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Initial Load (ฉบับแก้ไขสมบูรณ์) ---
+    function initializeApp() {
+        console.log("Initializing app...");
+        loadSettings();
 
-    // --- Initial Load ---
-    const savedPlayerName = sessionStorage.getItem('playerName');
-    if (savedPlayerName) inputs.playerName.value = savedPlayerName;
-    
-    // เพิ่มการโหลด ID ผู้เล่นจาก Session Storage เพื่อให้จำได้แม้จะสลับแอปหรือรีเฟรช
-    const savedPlayerId = sessionStorage.getItem('currentPlayerId');
-    if (savedPlayerId) {
-        currentPlayerId = savedPlayerId;
+        const savedPlayerId = sessionStorage.getItem('currentPlayerId');
+        const savedPlayerName = sessionStorage.getItem('playerName');
+
+        if (savedPlayerId && savedPlayerName) {
+            console.log(`Found existing player: ${savedPlayerName} (${savedPlayerId})`);
+            currentPlayerId = savedPlayerId;
+            playerName = savedPlayerName;
+            
+            inputs.playerName.value = playerName;
+            lobbyElements.preLobbyPlayerName.textContent = playerName;
+            navigateTo('preLobby');
+
+        } else {
+            console.log("No existing player found. Navigating to home page.");
+            if (savedPlayerName) {
+                inputs.playerName.value = savedPlayerName;
+            }
+            navigateTo('home');
+        }
     }
 
-    loadSettings();
-    navigateTo('home');
-});
+    initializeApp();
 
-    // --- Initial Load ---
-    const savedPlayerName = sessionStorage.getItem('playerName');
-    if (savedPlayerName) inputs.playerName.value = savedPlayerName;
-    loadSettings();
-    navigateTo('home');
 });
