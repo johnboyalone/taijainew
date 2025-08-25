@@ -14,9 +14,9 @@ const database = firebase.database();
 // --- Global State ---
 let currentPlayerId = null, playerName = '', currentRoomId = null, currentInput = '';
 let playerRef = null, roomRef = null, roomListener = null, turnTimer = null;
-let defeatedMessageTimer = null; // Timer for the defeated message
+let defeatedMessageTimer = null;
 let isChatOpen = false;
-let hasInteracted = false; // For checking the first sound play
+let hasInteracted = false;
 
 // --- Settings State ---
 let settings = {
@@ -168,77 +168,56 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createRoom() {
-    playSound(sounds.click);
-    const roomName = inputs.roomName.value.trim() || `ห้องของ ${playerName}`;
-    const newRoomRef = database.ref('rooms').push();
-    currentRoomId = newRoomRef.key;
+        playSound(sounds.click);
+        const roomName = inputs.roomName.value.trim() || `ห้องของ ${playerName}`;
+        const newRoomRef = database.ref('rooms').push();
+        currentRoomId = newRoomRef.key;
+        newRoomRef.set({
+            name: roomName,
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            players: {},
+            status: 'waiting',
+            config: {
+                maxPlayers: parseInt(inputs.maxPlayers.value),
+                digitCount: parseInt(inputs.digitCount.value),
+                turnTime: parseInt(inputs.turnTime.value)
+            }
+        }).then(() => joinRoom(currentRoomId, roomName));
+    }
 
-    // รวบรวมข้อมูล config ไว้ในตัวแปร
-    const roomConfig = {
-        maxPlayers: parseInt(inputs.maxPlayers.value),
-        digitCount: parseInt(inputs.digitCount.value),
-        turnTime: parseInt(inputs.turnTime.value)
-    };
+    function joinRoom(roomId, roomName) {
+        playSound(sounds.click);
+        currentRoomId = roomId;
+        roomRef = database.ref(`rooms/${currentRoomId}`);
+        sessionStorage.setItem('playerStatus', 'playing');
 
-    newRoomRef.set({
-        name: roomName,
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
-        players: {},
-        status: 'waiting',
-        config: roomConfig // ใช้ตัวแปรที่สร้างไว้
-    }).then(() => {
-        // ส่งข้อมูล config ที่เรารู้อยู่แล้วเข้าไปใน joinRoom โดยตรง
-        joinRoom(currentRoomId, roomName, roomConfig);
-    });
-}
-
-    // เพิ่มพารามิเตอร์ตัวที่สาม (config) เข้าไป
-function joinRoom(roomId, roomName, config) {
-    playSound(sounds.click);
-    currentRoomId = roomId;
-    sessionStorage.setItem('roomId', roomId);
-    roomRef = database.ref(`rooms/${currentRoomId}`);
-    sessionStorage.setItem('playerStatus', 'playing');
-
-    // เมื่อเป็นคนสร้างห้อง เราจะมี config มาด้วย แต่ถ้าเป็นคนกดเข้าร่วม (Join) เราจะไม่มี
-    // ดังนั้นเราต้องเขียนโค้ดให้รองรับทั้ง 2 กรณี
-    const joinLogic = (loadedConfig) => {
         roomRef.child('players').once('value', snapshot => {
-            if (snapshot.numChildren() >= loadedConfig.maxPlayers) {
-                alert('ขออภัย, ห้องนี้เต็มแล้ว');
-                // ถ้าเป็นคนสร้างแล้วห้องเต็ม (ซึ่งไม่ควรเกิด) ก็ไม่ต้องทำอะไร
-                // ถ้าเป็นคนกด join แล้วห้องเต็ม ก็จะหยุดแค่นี้
-                return;
-            }
+            roomRef.child('config').once('value', configSnapshot => {
+                const config = configSnapshot.val();
+                if (snapshot.numChildren() >= config.maxPlayers && !snapshot.hasChild(currentPlayerId)) {
+                    alert('ขออภัย, ห้องนี้เต็มแล้ว');
+                    return;
+                }
 
-            // โค้ดส่วนที่เหลือเหมือนเดิมทั้งหมด
-            playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
-            const initialPlayerData = { /* ... */ };
-            playerRef.set(initialPlayerData).then(() => {
-                connectedRef.on('value', (snap) => { /* ... */ });
+                playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
+                playerRef.set({ name: playerName, isReady: false, hp: 3, status: 'playing', stats: { guesses: 0, assassinateFails: 0, timeOuts: 0, correctGuesses: 0 } });
+                
+                playerRef.onDisconnect().update({ status: 'offline' });
+
+                const connectedRef = database.ref('.info/connected');
+                connectedRef.on('value', (snap) => {
+                    if (snap.val() === true && playerRef) {
+                        playerRef.update({ status: 'playing' });
+                        playerRef.onDisconnect().update({ status: 'offline' });
+                    }
+                });
+
+                gameElements.roomName.textContent = `ห้อง: ${roomName}`;
+                listenToRoomUpdates();
+                navigateTo('game');
             });
-
-            gameElements.roomName.textContent = `ห้อง: ${roomName}`;
-            listenToRoomUpdates();
-            navigateTo('game');
-        });
-    };
-
-    if (config) {
-        // กรณีเป็นคนสร้างห้อง: เรามี config มาแล้ว ใช้ได้เลย
-        joinLogic(config);
-    } else {
-        // กรณีเป็นคนกดเข้าร่วมห้อง: เราต้องไปดึง config จาก Firebase ก่อน
-        roomRef.child('config').once('value', configSnapshot => {
-            const loadedConfig = configSnapshot.val();
-            if (loadedConfig) {
-                joinLogic(loadedConfig);
-            } else {
-                alert("ไม่สามารถโหลดข้อมูลห้องได้!");
-            }
         });
     }
-}
 
     function listenToRooms() {
         database.ref('rooms').on('value', snapshot => {
@@ -246,7 +225,7 @@ function joinRoom(roomId, roomName, config) {
             lobbyElements.roomListContainer.innerHTML = '';
             if (rooms) {
                 Object.entries(rooms).forEach(([id, room]) => {
-                    const playerCount = Object.keys(room.players || {}).length;
+                    const playerCount = Object.values(room.players || {}).filter(p => p.status !== 'offline').length;
                     if (room.status === 'waiting' && playerCount < room.config.maxPlayers) {
                         const item = document.createElement('div');
                         item.className = 'room-item';
@@ -261,65 +240,64 @@ function joinRoom(roomId, roomName, config) {
             }
         });
     }
-
     // --- Game Logic ---
-    function joinRoom(roomId, roomName) {
-    playSound(sounds.click);
-    currentRoomId = roomId;
-    roomRef = database.ref(`rooms/${currentRoomId}`);
-    sessionStorage.setItem('playerStatus', 'playing');
-
-    roomRef.child('players').once('value', snapshot => {
-        roomRef.child('config').once('value', configSnapshot => {
-            const config = configSnapshot.val();
-            if (snapshot.numChildren() >= config.maxPlayers) {
-                alert('ขออภัย, ห้องนี้เต็มแล้ว');
+    function listenToRoomUpdates() {
+        if (!roomRef) return;
+        if (roomListener) roomRef.off('value', roomListener);
+        roomListener = roomRef.on('value', snapshot => {
+            if (!snapshot.exists()) {
+                alert('ห้องถูกปิดแล้ว');
+                leaveRoom(true);
                 return;
             }
+            const roomData = snapshot.val();
+            updatePlayerList(roomData);
+            updateChat(roomData.chat);
 
-            playerRef = database.ref(`rooms/${currentRoomId}/players/${currentPlayerId}`);
+            const myPlayer = roomData.players[currentPlayerId];
+            const previousPlayerState = sessionStorage.getItem('playerStatus');
 
-            // สร้างข้อมูลผู้เล่นพร้อมกับ 'lastOnline' timestamp
-            const initialPlayerData = {
-                name: playerName,
-                isReady: false,
-                hp: 3,
-                status: 'playing',
-                stats: { guesses: 0, assassinateFails: 0, timeOuts: 0, correctGuesses: 0 },
-                lastOnline: firebase.database.ServerValue.TIMESTAMP // เพิ่ม field นี้
-            };
+            if (roomData.status === 'finished') {
+                defeatedOverlay.style.display = 'none';
+            } else if (myPlayer) {
+                if (myPlayer.status === 'defeated' && previousPlayerState !== 'defeated') {
+                    showDefeatedMessage();
+                }
+            }
+            if (myPlayer) {
+                sessionStorage.setItem('playerStatus', myPlayer.status);
+            } else {
+                sessionStorage.removeItem('playerStatus');
+            }
 
-            playerRef.set(initialPlayerData).then(() => {
-                // --- นี่คือส่วนของ Presence System ที่เพิ่มเข้ามา ---
-                connectedRef.on('value', (snap) => {
-                    if (snap.val() === true) {
-                        // เมื่อเชื่อมต่อสำเร็จ ให้ตั้งค่า onDisconnect เพื่ออัปเดตสถานะเมื่อหลุด
-                        // แทนที่จะลบทิ้ง เราจะอัปเดตแค่ lastOnline timestamp
-                        playerRef.onDisconnect().update({
-                            lastOnline: firebase.database.ServerValue.TIMESTAMP
-                        }).then(() => {
-                            // และเมื่อกลับมาเชื่อมต่อใหม่ ก็ให้อัปเดต lastOnline อีกครั้ง
-                            // เพื่อบอกว่าเราออนไลน์อยู่
-                            playerRef.update({
-                                lastOnline: firebase.database.ServerValue.TIMESTAMP
-                            });
-                        });
-                    }
-                });
-            });
-
-            gameElements.roomName.textContent = `ห้อง: ${roomName}`;
-            listenToRoomUpdates();
-            navigateTo('game');
+            if (roomData.status === 'waiting') {
+                gameElements.setupSection.style.display = myPlayer?.isReady ? 'none' : 'block';
+                gameElements.waitingSection.style.display = myPlayer?.isReady ? 'block' : 'none';
+                gameElements.gameplaySection.style.display = 'none';
+                checkIfGameCanStart(roomData);
+            } else if (roomData.status === 'playing') {
+                const activePlayers = Object.values(roomData.players).filter(p => p.status === 'playing');
+                if (activePlayers.length <= 1) {
+                    const winner = activePlayers.length === 1 ? activePlayers[0] : null;
+                    roomRef.update({
+                        status: 'finished',
+                        winnerName: winner ? winner.name : "ไม่มีผู้ชนะ"
+                    });
+                } else {
+                    updateGameUI(roomData);
+                }
+            } else if (roomData.status === 'finished' && !roomData.summaryShown) {
+                roomRef.update({ summaryShown: true });
+                endGame(roomData);
+            }
         });
-    });
-}
-
+    }
     function checkIfGameCanStart(roomData) {
         const players = roomData.players || {};
         const playerIds = Object.keys(players);
-        if (playerIds.length < 2) return;
-        const allReady = Object.values(players).every(p => p.isReady);
+        const onlinePlayers = Object.values(players).filter(p => p.status !== 'offline');
+        if (onlinePlayers.length < 2) return;
+        const allReady = onlinePlayers.every(p => p.isReady);
         if (allReady) startGame(playerIds);
     }
 
@@ -341,6 +319,7 @@ function joinRoom(roomId, roomName, config) {
         }
 
         const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
+        if (activePlayers.length === 0) return;
 
         const currentTargetIndexInActive = targetPlayerIndex % activePlayers.length;
         const targetPlayerId = activePlayers[currentTargetIndexInActive];
@@ -458,64 +437,29 @@ function joinRoom(roomId, roomName, config) {
         });
     }
 
-    // โค้ดที่แก้ไขใหม่ (ใช้ Transaction)
-function moveToNextTurn() {
-    if (!roomRef) return;
+    function moveToNextTurn() {
+        roomRef.once('value', snapshot => {
+            const roomData = snapshot.val();
+            if (roomData.status !== 'playing') return;
 
-    roomRef.transaction(currentRoomData => {
-        // ถ้าไม่มีข้อมูลห้อง หรือเกมไม่ได้กำลังเล่นอยู่ ให้ยกเลิก transaction
-        if (!currentRoomData || currentRoomData.status !== 'playing') {
-            return; // Abort transaction
-        }
+            const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = roomData;
+            const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
+            if (activePlayers.length <= 1) { 
+                roomRef.update({ turnStartTime: firebase.database.ServerValue.TIMESTAMP }); 
+                return; 
+            }
 
-        const { playerOrder, players, targetPlayerIndex, attackerTurnIndex } = currentRoomData;
+            const currentTargetId = activePlayers[targetPlayerIndex % activePlayers.length];
+            const attackers = activePlayers.filter(id => id !== currentTargetId);
 
-        // หาผู้เล่นที่ยังอยู่ในเกม (status === 'playing')
-        const activePlayers = playerOrder.filter(id => players[id] && players[id].status === 'playing');
-
-        // ถ้าเหลือผู้เล่นน้อยกว่าหรือเท่ากับ 1 คน, ไม่ต้องเปลี่ยนตา แต่รีเซ็ตเวลาเพื่อรอจบเกม
-        if (activePlayers.length <= 1) {
-            currentRoomData.turnStartTime = firebase.database.ServerValue.TIMESTAMP;
-            return currentRoomData;
-        }
-
-        // --- คำนวณตาของเป้าหมาย (Target) และผู้ทาย (Attacker) ---
-
-        // 1. หาเป้าหมายปัจจุบัน
-        const currentTargetId = activePlayers[targetPlayerIndex % activePlayers.length];
-        
-        // 2. หาผู้ทายทั้งหมด (คือผู้เล่นที่ยัง Active และไม่ใช่เป้าหมาย)
-        const attackers = activePlayers.filter(id => id !== currentTargetId);
-
-        // 3. คำนวณหาผู้ทายคนถัดไป
-        const nextAttackerTurnIndex = (attackerTurnIndex + 1);
-
-        // 4. ตรวจสอบว่าผู้ทายวนครบทุกคนหรือยัง
-        if (nextAttackerTurnIndex >= attackers.length) {
-            // ถ้าครบแล้ว: เปลี่ยนเป้าหมายคนถัดไป และเริ่มนับผู้ทายใหม่ที่ index 0
-            currentRoomData.targetPlayerIndex = (targetPlayerIndex + 1) % activePlayers.length;
-            currentRoomData.attackerTurnIndex = 0;
-        } else {
-            // ถ้ายังไม่ครบ: เปลี่ยนแค่ผู้ทายคนถัดไป
-            currentRoomData.attackerTurnIndex = nextAttackerTurnIndex;
-        }
-
-        // รีเซ็ตเวลาเริ่มตาใหม่
-        currentRoomData.turnStartTime = firebase.database.ServerValue.TIMESTAMP;
-
-        // ส่งข้อมูลที่อัปเดตแล้วกลับไป
-        return currentRoomData;
-
-    }, (error, committed, snapshot) => {
-        if (error) {
-            console.error('Transaction failed abnormally!', error);
-        } else if (!committed) {
-            console.log('Transaction not committed (aborted).');
-        } else {
-            console.log('Turn changed successfully!');
-        }
-    });
-}
+            const nextAttackerIndex = (attackerTurnIndex + 1);
+            if (nextAttackerIndex >= attackers.length) {
+                roomRef.update({ targetPlayerIndex: (targetPlayerIndex + 1), attackerTurnIndex: 0, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+            } else {
+                roomRef.update({ attackerTurnIndex: nextAttackerIndex, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+            }
+        });
+    }
 
     function calculateHints(guess, secret) {
         let bulls = 0, cows = 0;
@@ -538,29 +482,25 @@ function moveToNextTurn() {
         });
         return { bulls, cows };
     }
-
     // --- UI Updates ---
     function showDefeatedMessage() {
-        // If there's an existing timer, clear it
         if (defeatedMessageTimer) {
             clearTimeout(defeatedMessageTimer);
         }
 
         const overlay = defeatedOverlay;
-        overlay.style.display = 'block'; // Make it visible
+        overlay.style.display = 'block';
         overlay.classList.remove('hide');
         overlay.classList.add('show');
 
-        // Set a timer for 3 seconds (3000ms) to hide the message
         defeatedMessageTimer = setTimeout(() => {
             overlay.classList.remove('show');
             overlay.classList.add('hide');
-            // Hide the element completely after the animation ends
             setTimeout(() => {
-                if (overlay.classList.contains('hide')) { // check if it should still be hidden
+                if (overlay.classList.contains('hide')) {
                     overlay.style.display = 'none';
                 }
-            }, 500); // 500ms is the transition duration in CSS
+            }, 500);
         }, 3000);
     }
     function updatePlayerList(roomData) {
@@ -568,6 +508,8 @@ function moveToNextTurn() {
         gameElements.playerList.innerHTML = '';
         if (!players) return;
         Object.entries(players).forEach(([id, player]) => {
+            if (player.status === 'offline') return;
+
             const item = document.createElement('div');
             item.className = 'player-item';
             if (player.status === 'defeated') item.classList.add('player-defeated');
@@ -805,10 +747,14 @@ function moveToNextTurn() {
     }
 
     // --- General Functions ---
-    function leaveRoom() {
+    function leaveRoom(isRoomClosed = false) {
         playSound(sounds.click);
-        if (playerRef) playerRef.remove();
-        if (roomRef && roomListener) roomRef.off('value', roomListener);
+        if (playerRef && !isRoomClosed) {
+            playerRef.remove();
+        }
+        if (roomRef && roomListener) {
+            roomRef.off('value', roomListener);
+        }
         if (turnTimer) clearInterval(turnTimer);
         playerRef = null; roomRef = null; roomListener = null; currentRoomId = null; currentInput = '';
         navigateTo('preLobby');
@@ -871,7 +817,7 @@ function moveToNextTurn() {
     buttons.goToCreate.addEventListener('click', () => { playSound(sounds.click); navigateTo('lobbyCreate'); });
     buttons.goToJoin.addEventListener('click', handleGoToJoin);
     buttons.createRoom.addEventListener('click', createRoom);
-    buttons.leaveRoom.addEventListener('click', leaveRoom);
+    buttons.leaveRoom.addEventListener('click', () => leaveRoom(false));
     buttons.readyUp.addEventListener('click', handleReadyUp);
     buttons.delete.addEventListener('click', handleDelete);
     buttons.guess.addEventListener('click', () => handleAction(false));
@@ -881,7 +827,7 @@ function moveToNextTurn() {
         playSound(sounds.click);
         if (settings.isBgmEnabled) sounds.background.pause();
         hasInteracted = false;
-        leaveRoom();
+        leaveRoom(false);
         navigateTo('home');
     });
     buttons.playAgain.addEventListener('click', () => { playSound(sounds.click); navigateTo('preLobby'); });
